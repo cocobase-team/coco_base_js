@@ -1,17 +1,20 @@
-import { Cocobase } from "../src/index.js";
+import { Cocobase } from "../src/index.ts";
 
 interface Post {
   title: string;
   content?: string;
   author?: string;
 }
-const db = new Cocobase({ apiKey: "vA6352GeZvZzC5ezC7xR2zSMddPF4oSDRfVUOW-U" });
+const db = new Cocobase({ apiKey: "" });
 
 async function run() {
-  const user = await db.register("lordyacey@gmail.com", "password", {
-    firstName: "Acy",
-  });
+  await db.login("lordy2acey@gmail.com", "password");
 
-  db.logout();
+  const user = db.user;
+  if (!user) {
+    throw new Error("User is not authenticated");
+  }
+  console.log("roles", user.roles, user);
+
 }
 run();

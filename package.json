@@ -1,6 +1,6 @@
 {
   "name": "cocobase",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "The Official cocobase sdk",
   "type": "module",
   "main": "./dist/cjs/index.js",
@@ -44,9 +44,9 @@
   "author": "Your Name",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/yourusername/cocobase/issues"
+    "url": "https://github.com/lordace-coder/coco_base_js/issues"
   },
-  "homepage": "https://github.com/yourusername/cocobase#readme",
+  "homepage": "https://github.com/lordace-coder/coco_base_js#readme",
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@rollup/plugin-typescript": "^12.1.2",

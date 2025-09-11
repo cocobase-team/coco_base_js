@@ -17,7 +17,7 @@ import {
 import { closeConnection as closeCon } from "../utils/socket";
 export class Cocobase {
   private baseURL: string;
-   apiKey?: string;
+  apiKey?: string;
   private token?: string;
   user?: AppUser;
 
@@ -198,7 +198,7 @@ export class Cocobase {
     );
     this.token = (await response).access_token;
     this.setToken(this.token);
-    this.getCurrentUser();
+    await this.getCurrentUser();
   }
 
   logout() {
@@ -251,8 +251,8 @@ export class Cocobase {
     collection: string,
     callback: (event: { event: string; data: Document<any> }) => void,
     connectionName?: string,
-    onOpen: () => void = () => {},
-    onError: () => void = () => {}
+    onOpen: () => void = () => { },
+    onError: () => void = () => { }
   ): Connection {
     const socket = new WebSocket(
       `${this.baseURL.replace("http", "ws")}/realtime/collections/${collection}`
@@ -285,6 +285,12 @@ export class Cocobase {
         }
       },
     };
+  }
+  hasRole(role: string): boolean {
+    if (!this.user) {
+      throw new Error("User is not authenticated");
+    }
+    return this.user.roles.includes(role);
   }
   closeConnection(name: string) {
     closeCon(name);

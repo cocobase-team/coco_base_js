@@ -30,6 +30,7 @@ export interface AppUser {
   created_at: string;
   data: Record<string, any>;
   client_id: string;
+  roles: string[];
 }
 
 export interface Connection {
