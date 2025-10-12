@@ -59,7 +59,7 @@ function buildFilterQuery({
   return params.toString();
 }
 
-const BASEURL = "https://futurebase.vercel.app";
+const BASEURL = "https://cocobase.pxxl.click";
 export {
   getFromLocalStorage,
   setToLocalStorage,

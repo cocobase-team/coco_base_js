@@ -1,6 +1,6 @@
 {
   "name": "cocobase",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "description": "The Official cocobase sdk",
   "type": "module",
   "main": "./dist/cjs/index.js",
@@ -21,7 +21,7 @@
     "build": "npm run clean && npm run build:esm && npm run build:cjs",
     "build:esm": "tsc",
     "build:cjs": "tsc -p tsconfig.cjs.json",
-    "clean": "if exist dist rd /s /q dist",
+    "clean": "rm -rf dist",
     "test": "tsx test/app.ts",
     "prepublishOnly": "npm run build",
     "lint": "eslint src --ext .ts",
