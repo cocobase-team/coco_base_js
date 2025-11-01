@@ -1,5 +1,6 @@
 export interface CocobaseConfig {
   apiKey?: string;
+  baseURL?: string;
 }
 
 export interface Collection {
@@ -16,9 +17,13 @@ export interface Document<T> {
   collection: Collection;
 }
 export interface Query {
-  filters?: Record<string, string>;
+  filters?: Record<string, string | number | boolean>;
   limit?: number;
   offset?: number;
+  sort?: string;
+  order?: "asc" | "desc";
+  populate?: string | string[];
+  select?: string | string[];
 }
 export interface TokenResponse {
   access_token: string;

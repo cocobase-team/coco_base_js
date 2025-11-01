@@ -60,9 +60,52 @@ Students and bootcamp graduates can focus on learning frontend skills without ba
 ### 🗄️ **Instant Database**
 
 - **NoSQL Collections**: Store any JSON data structure
+- **Advanced Query Filtering**: 12 operators, AND/OR logic, multi-field search
 - **Real-time Updates**: Changes sync instantly across all clients
 - **Automatic Indexing**: Fast queries without database optimization headaches
 - **Type Safety**: Full TypeScript support with generic types
+
+### 🔍 **Powerful Query System**
+
+Build complex queries with ease:
+
+```typescript
+// Simple filtering
+await db.listDocuments("users", {
+  filters: { status: "active", age_gte: 18 },
+});
+
+// Advanced multi-field OR search
+await db.listDocuments("users", {
+  filters: {
+    name__or__email_contains: "john",
+    status: "active",
+  },
+});
+
+// Complex queries with named OR groups
+await db.listDocuments("products", {
+  filters: {
+    "[or:availability]inStock": true,
+    "[or:availability]preOrder": true,
+    "[or:pricing]onSale": true,
+    "[or:pricing]price_lt": 50,
+    category: "electronics",
+  },
+  sort: "price",
+  order: "asc",
+  limit: 50,
+});
+```
+
+**Supported Operators:**
+
+- Comparison: `eq`, `ne`, `gt`, `gte`, `lt`, `lte`
+- String: `contains`, `startswith`, `endswith`
+- List: `in`, `notin`
+- Null: `isnull`
+
+**[→ View Complete Query Guide](docs/QueryFiltering.md)**
 
 ### 🔐 **Complete Authentication System**
 

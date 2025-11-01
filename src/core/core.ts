@@ -22,7 +22,7 @@ export class Cocobase {
   user?: AppUser;
 
   constructor(config: CocobaseConfig) {
-    this.baseURL = BASEURL;
+    this.baseURL = config.baseURL ?? BASEURL;
     this.apiKey = config.apiKey;
   }
 
