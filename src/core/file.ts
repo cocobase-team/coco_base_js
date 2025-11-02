@@ -13,7 +13,6 @@ const uploadFile = async (cb: Cocobase, file: File) => {
     method: "POST",
     body: formData,
     headers: {
-      "Content-Type": "multipart/form-data",
       "x-api-key": cb.apiKey!,
     },
   });
