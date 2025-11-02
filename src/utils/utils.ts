@@ -250,7 +250,7 @@ function buildFilterQuery({
   return params.toString();
 }
 
-const BASEURL = "https://cocobase.pxxl.click";
+const BASEURL = "https://api.cocobase.buzz";
 export {
   getFromLocalStorage,
   setToLocalStorage,

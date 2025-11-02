@@ -9,7 +9,7 @@ const uploadFile = async (cb: Cocobase, file: File) => {
   const formData = new FormData();
   formData.append("file", file);
 
-  const req = await fetch(BASEURL + "/files/upload-file", {
+  const req = await fetch(BASEURL + "/collections/file", {
     method: "POST",
     body: formData,
     headers: {
