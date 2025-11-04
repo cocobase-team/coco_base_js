@@ -21,7 +21,7 @@ export class Cocobase {
   private baseURL: string;
   apiKey?: string;
   private token?: string;
-  projectId: string;
+  projectId?: string;
   user?: AppUser;
   functions: CloudFunction;
 
@@ -29,7 +29,11 @@ export class Cocobase {
     this.baseURL = config.baseURL ?? BASEURL;
     this.apiKey = config.apiKey;
     this.projectId = config.projectId;
-    this.functions = new CloudFunction(this.projectId, this.token);
+
+    this.functions = new CloudFunction(
+      config.projectId || "project id required",
+      () => this.token
+    );
   }
 
   getToken(): string | undefined {

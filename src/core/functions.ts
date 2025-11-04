@@ -14,16 +14,31 @@ interface FunctionResponse<T> {
 }
 export class CloudFunction {
   projectId: string;
-  token: string | undefined;
-  constructor(projectId: string,token?:string) {
+  private getToken: () => string | undefined;
+
+  constructor(projectId: string, getToken: () => string | undefined) {
     this.projectId = projectId;
-    this.token = token;
+    this.getToken = getToken;
+
+    // Validate projectId
+    if (!projectId || projectId.trim() === "") {
+      throw new Error(
+        "CloudFunction requires a valid projectId. Please provide projectId in CocobaseConfig."
+      );
+    }
   }
 
   async execute<T>(
     functionName: string,
     params?: FunctionParams
   ): Promise<FunctionResponse<T>> {
+    // Validate projectId again in case it was modified
+    if (!this.projectId || this.projectId.trim() === "") {
+      throw new Error(
+        "Invalid projectId. Please ensure projectId is set in CocobaseConfig."
+      );
+    }
+
     const url = `${BASEURL}/functions/${this.projectId}/func/${functionName}`;
 
     // Default to GET if no params provided, otherwise use specified method or POST
@@ -35,16 +50,21 @@ export class CloudFunction {
         "Content-Type": "application/json",
       },
     };
-    if (this.token) {
+
+    // Get the latest token dynamically
+    const token = this.getToken();
+    if (token) {
       fetchOptions.headers = {
         ...fetchOptions.headers,
-        Authorization: `Bearer ${this.token}`,
+        Authorization: `Bearer ${token}`,
       };
     }
 
     // Only add body for POST/PUT requests with payload
     if (method === "POST" && params?.payload) {
-      fetchOptions.body = JSON.stringify(params.payload);
+      fetchOptions.body = JSON.stringify({
+        payload: params.payload,
+      });
     }
 
     const res = await fetch(url, fetchOptions);

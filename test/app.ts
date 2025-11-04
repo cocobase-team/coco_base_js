@@ -2,8 +2,8 @@ import { log } from "console";
 import { Cocobase } from "../src/index.ts";
 
 const db = new Cocobase({
-  apiKey: "my_api_key",
-  projectId: "my_project_id",
+  apiKey: "ybHxWKqV21F4EPgi1hgqq3xrltp4g6OwQNmGvO7d",
+  projectId: "77956f8d-12a4-4933-bd97-e414df9c693b",
 
 });
 
@@ -25,6 +25,6 @@ interface InvestmentBatch {
 }
 async function run() {
   const free_users = await db.functions.execute<number>("active_users")
-  log(free_users);
+  log(free_users.success);
 }
 run();

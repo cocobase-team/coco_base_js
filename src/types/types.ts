@@ -1,7 +1,7 @@
 export interface CocobaseConfig {
-  apiKey: string;
+  apiKey?: string;
   baseURL?: string;
-  projectId: string;
+  projectId?: string;
 }
 
 export interface Collection {
