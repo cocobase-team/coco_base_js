@@ -2,7 +2,8 @@ import { log } from "console";
 import { Cocobase } from "../src/index.ts";
 
 const db = new Cocobase({
-  apiKey: "",
+  apiKey: "my_api_key",
+  projectId: "my_project_id",
 
 });
 
@@ -23,14 +24,7 @@ interface InvestmentBatch {
   user?: any;
 }
 async function run() {
-  const investmentBatches = await db.listDocuments<InvestmentBatch>(
-    "investment_batches",
-    {
-      populate: "user",
-      limit: 3,
-      select: ["user", "invested_amount", "interest_rate", "start_date"],
-    }
-  );
-  console.log(investmentBatches[0]);
+  const free_users = await db.functions.execute<number>("active_users")
+  log(free_users);
 }
 run();

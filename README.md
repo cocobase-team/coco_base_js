@@ -61,6 +61,7 @@ Students and bootcamp graduates can focus on learning frontend skills without ba
 
 - **NoSQL Collections**: Store any JSON data structure
 - **Advanced Query Filtering**: 12 operators, AND/OR logic, multi-field search
+- **File Uploads**: Simple file handling with automatic storage
 - **Real-time Updates**: Changes sync instantly across all clients
 - **Automatic Indexing**: Fast queries without database optimization headaches
 - **Type Safety**: Full TypeScript support with generic types
@@ -106,6 +107,41 @@ await db.listDocuments("products", {
 - Null: `isnull`
 
 **[→ View Complete Query Guide](docs/QueryFiltering.md)**
+
+### 📤 **Easy File Uploads**
+
+Upload files to any document field with a simple API:
+
+```typescript
+// Create user with avatar
+await db.createDocumentWithFiles(
+  "users",
+  { name: "John Doe", email: "john@example.com" },
+  { avatar: avatarFile, cover_photo: coverFile }
+);
+
+// Register user with profile picture
+await db.registerWithFiles(
+  "john@example.com",
+  "password123",
+  { username: "johndoe" },
+  { avatar: avatarFile }
+);
+
+// Update user avatar
+await db.updateUserWithFiles(undefined, undefined, undefined, {
+  avatar: newAvatarFile,
+});
+```
+
+**Supported:**
+
+- Single files: `{ avatar: file }`
+- Multiple files: `{ gallery: [file1, file2, file3] }`
+- Works with collections and user authentication
+- Automatic cloud storage and URL generation
+
+**[→ View File Upload Guide](docs/FileUploads.md)**
 
 ### 🔐 **Complete Authentication System**
 

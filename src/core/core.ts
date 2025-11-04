@@ -15,15 +15,25 @@ import {
 } from "../utils/utils";
 
 import { closeConnection as closeCon } from "../utils/socket";
+import { CloudFunction } from "./functions";
+
 export class Cocobase {
   private baseURL: string;
   apiKey?: string;
   private token?: string;
+  projectId: string;
   user?: AppUser;
+  functions: CloudFunction;
 
   constructor(config: CocobaseConfig) {
     this.baseURL = config.baseURL ?? BASEURL;
     this.apiKey = config.apiKey;
+    this.projectId = config.projectId;
+    this.functions = new CloudFunction(this.projectId, this.token);
+  }
+
+  getToken(): string | undefined {
+    return this.token;
   }
 
   private async request<T>(
@@ -118,6 +128,75 @@ export class Cocobase {
     );
   }
 
+  /**
+   * Create a document with file uploads
+   *
+   * @param collection - Collection name
+   * @param data - Document data (JSON object)
+   * @param files - Object mapping field names to File objects
+   *
+   * @example
+   * ```typescript
+   * // Upload avatar and cover photo
+   * await db.createDocumentWithFiles('users',
+   *   { name: 'John Doe', email: 'john@example.com' },
+   *   {
+   *     avatar: avatarFile,
+   *     cover_photo: coverFile
+   *   }
+   * );
+   *
+   * // Upload product with gallery
+   * await db.createDocumentWithFiles('products',
+   *   { name: 'Laptop', price: 1299 },
+   *   {
+   *     main_image: mainImageFile,
+   *     gallery: [img1, img2, img3] // Array for multiple files
+   *   }
+   * );
+   * ```
+   */
+  async createDocumentWithFiles<T = any>(
+    collection: string,
+    data: T,
+    files: Record<string, File | File[]>
+  ): Promise<Document<T>> {
+    const formData = new FormData();
+
+    // Add JSON data
+    formData.append("data", JSON.stringify(data));
+
+    // Add files with their field names
+    for (const [fieldName, fileOrFiles] of Object.entries(files)) {
+      if (Array.isArray(fileOrFiles)) {
+        // Multiple files with same field name creates an array
+        fileOrFiles.forEach((file) => {
+          formData.append(fieldName, file);
+        });
+      } else {
+        // Single file
+        formData.append(fieldName, fileOrFiles);
+      }
+    }
+
+    const url = `${this.baseURL}/collections/documents?collection=${collection}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        ...(this.apiKey ? { "x-api-key": `${this.apiKey}` } : {}),
+        ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+      },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`File upload failed: ${errorText}`);
+    }
+
+    return res.json() as Promise<Document<T>>;
+  }
+
   // Update a document
   async updateDocument<T = any>(
     collection: string,
@@ -129,6 +208,73 @@ export class Cocobase {
       `/collections/${collection}/documents/${docId}`,
       data
     );
+  }
+
+  /**
+   * Update a document with file uploads
+   *
+   * @param collection - Collection name
+   * @param docId - Document ID
+   * @param data - Partial document data to update (optional)
+   * @param files - Object mapping field names to File objects (optional)
+   *
+   * @example
+   * ```typescript
+   * // Update only avatar
+   * await db.updateDocumentWithFiles('users', 'user-123',
+   *   undefined,
+   *   { avatar: newAvatarFile }
+   * );
+   *
+   * // Update data and files
+   * await db.updateDocumentWithFiles('users', 'user-123',
+   *   { bio: 'Updated bio' },
+   *   { avatar: newAvatarFile, cover_photo: newCoverFile }
+   * );
+   * ```
+   */
+  async updateDocumentWithFiles<T = any>(
+    collection: string,
+    docId: string,
+    data?: Partial<T>,
+    files?: Record<string, File | File[]>
+  ): Promise<Document<T>> {
+    const formData = new FormData();
+
+    // Add JSON data if provided
+    if (data) {
+      formData.append("data", JSON.stringify(data));
+    }
+
+    // Add files with their field names if provided
+    if (files) {
+      for (const [fieldName, fileOrFiles] of Object.entries(files)) {
+        if (Array.isArray(fileOrFiles)) {
+          fileOrFiles.forEach((file) => {
+            formData.append(fieldName, file);
+          });
+        } else {
+          formData.append(fieldName, fileOrFiles);
+        }
+      }
+    }
+
+    const url = `${this.baseURL}/collections/${collection}/documents/${docId}`;
+    const res = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        ...(this.apiKey ? { "x-api-key": `${this.apiKey}` } : {}),
+        ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+      },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`File upload failed: ${errorText}`);
+    }
+
+    return res.json() as Promise<Document<T>>;
   }
 
   // Delete a document
@@ -201,6 +347,80 @@ export class Cocobase {
     await this.getCurrentUser();
   }
 
+  /**
+   * Register a new user with file uploads (avatar, cover photo, etc.)
+   *
+   * @param email - User email
+   * @param password - User password
+   * @param data - Additional user data (optional)
+   * @param files - Object mapping field names to File objects (optional)
+   *
+   * @example
+   * ```typescript
+   * // Register with avatar
+   * await db.registerWithFiles(
+   *   'john@example.com',
+   *   'password123',
+   *   { username: 'johndoe', full_name: 'John Doe' },
+   *   { avatar: avatarFile }
+   * );
+   *
+   * // Register with avatar and cover photo
+   * await db.registerWithFiles(
+   *   'john@example.com',
+   *   'password123',
+   *   { username: 'johndoe' },
+   *   { avatar: avatarFile, cover_photo: coverFile }
+   * );
+   * ```
+   */
+  async registerWithFiles(
+    email: string,
+    password: string,
+    data?: Record<string, any>,
+    files?: Record<string, File | File[]>
+  ): Promise<AppUser> {
+    const formData = new FormData();
+
+    // Add JSON data
+    formData.append("data", JSON.stringify({ email, password, data }));
+
+    // Add files with their field names if provided
+    if (files) {
+      for (const [fieldName, fileOrFiles] of Object.entries(files)) {
+        if (Array.isArray(fileOrFiles)) {
+          fileOrFiles.forEach((file) => {
+            formData.append(fieldName, file);
+          });
+        } else {
+          formData.append(fieldName, fileOrFiles);
+        }
+      }
+    }
+
+    const url = `${this.baseURL}/auth-collections/signup`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        ...(this.apiKey ? { "x-api-key": `${this.apiKey}` } : {}),
+      },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Registration failed: ${errorText}`);
+    }
+
+    const response = (await res.json()) as TokenResponse & { user: AppUser };
+    this.token = response.access_token;
+    this.setToken(this.token);
+    this.user = response.user;
+    setToLocalStorage("cocobase-user", JSON.stringify(response.user));
+
+    return response.user;
+  }
+
   logout() {
     this.token = undefined;
   }
@@ -247,12 +467,101 @@ export class Cocobase {
     return user as AppUser;
   }
 
+  /**
+   * Update current user with file uploads
+   *
+   * @param data - User data to update (optional)
+   * @param email - New email (optional)
+   * @param password - New password (optional)
+   * @param files - Object mapping field names to File objects (optional)
+   *
+   * @example
+   * ```typescript
+   * // Update only avatar
+   * await db.updateUserWithFiles(
+   *   undefined, undefined, undefined,
+   *   { avatar: newAvatarFile }
+   * );
+   *
+   * // Update bio and avatar
+   * await db.updateUserWithFiles(
+   *   { bio: 'Updated bio' },
+   *   undefined, undefined,
+   *   { avatar: newAvatarFile }
+   * );
+   *
+   * // Update multiple fields and files
+   * await db.updateUserWithFiles(
+   *   { username: 'newusername', bio: 'New bio' },
+   *   'newemail@example.com',
+   *   undefined,
+   *   { avatar: newAvatar, cover_photo: newCover }
+   * );
+   * ```
+   */
+  async updateUserWithFiles(
+    data?: Record<string, any> | null,
+    email?: string | null,
+    password?: string | null,
+    files?: Record<string, File | File[]>
+  ): Promise<AppUser> {
+    if (!this.token) {
+      throw new Error("User is not authenticated");
+    }
+
+    const formData = new FormData();
+
+    // Build request body by excluding null or undefined values
+    const body: Record<string, any> = {};
+    if (data != null) body.data = mergeUserData(this.user?.data || {}, data);
+    if (email != null) body.email = email;
+    if (password != null) body.password = password;
+
+    // Add JSON data if there's any
+    if (Object.keys(body).length > 0) {
+      formData.append("data", JSON.stringify(body));
+    }
+
+    // Add files with their field names if provided
+    if (files) {
+      for (const [fieldName, fileOrFiles] of Object.entries(files)) {
+        if (Array.isArray(fileOrFiles)) {
+          fileOrFiles.forEach((file) => {
+            formData.append(fieldName, file);
+          });
+        } else {
+          formData.append(fieldName, fileOrFiles);
+        }
+      }
+    }
+
+    const url = `${this.baseURL}/auth-collections/user`;
+    const res = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+      },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`User update failed: ${errorText}`);
+    }
+
+    const user = (await res.json()) as AppUser;
+    this.user = user;
+    setToLocalStorage("cocobase-user", JSON.stringify(user));
+
+    return user;
+  }
+
   watchCollection(
     collection: string,
     callback: (event: { event: string; data: Document<any> }) => void,
     connectionName?: string,
-    onOpen: () => void = () => { },
-    onError: () => void = () => { }
+    onOpen: () => void = () => {},
+    onError: () => void = () => {}
   ): Connection {
     const socket = new WebSocket(
       `${this.baseURL.replace("http", "ws")}/realtime/collections/${collection}`
