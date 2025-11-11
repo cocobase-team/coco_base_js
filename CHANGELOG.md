@@ -1,322 +1,227 @@
-# COCOBASE SDK - File Upload Feature Summary
+# Changelog
 
-## ✨ New Features Added
+All notable changes to the Cocobase JavaScript SDK will be documented in this file.
 
-The COCOBASE JavaScript/TypeScript SDK now supports easy file uploads for both collections and user authentication!
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
----
+## [1.2.0] - 2025-11-11
 
-## 📦 New Methods
+### Added
 
-### Collection Methods
+#### Documentation
+- 📚 **Complete Docusaurus documentation site** with beginner-friendly guides
+  - Comprehensive getting started guide with installation, quickstart, and configuration
+  - Core concepts documentation for collections, documents, authentication, and queries
+  - Detailed guides for CRUD operations, file uploads, real-time features, and more
+  - Full API reference with examples
+  - Framework-specific integration guides (React, Vue, Next.js, Nuxt, React Native)
+  - Custom styling and responsive design
 
-#### `createDocumentWithFiles<T>(collection, data, files)`
+#### Code Quality Improvements
+- ✨ **Comprehensive JSDoc comments** across all classes and methods
+  - Detailed parameter descriptions with types
+  - Return type documentation
+  - Usage examples for every major method
+  - Clear error documentation
+  - @template annotations for generics
 
-Create a document with file uploads.
+#### Type Definitions
+- 🎯 **Enhanced TypeScript documentation** for all interfaces
+  - Detailed property descriptions for CocobaseConfig, Document, Query, etc.
+  - Better generic type documentation
+  - Improved filter operator types
+  - Comprehensive connection and user types
 
-```typescript
-await db.createDocumentWithFiles(
-  "users",
-  { name: "John Doe", email: "john@example.com" },
-  { avatar: avatarFile, cover_photo: coverFile }
-);
-```
+#### Code Structure
+- 🏗️ **Improved code organization**
+  - Better separation of concerns
+  - Cleaner imports and exports
+  - More consistent naming conventions
+  - Enhanced error handling patterns
 
-#### `updateDocumentWithFiles<T>(collection, docId, data?, files?)`
+### Changed
 
-Update a document with file uploads.
+- **Documentation Structure**: Migrated from simple markdown to full Docusaurus site
+- **Code Comments**: Upgraded from basic comments to comprehensive JSDoc documentation
+- **Type Safety**: Enhanced TypeScript definitions across the codebase
 
-```typescript
-await db.updateDocumentWithFiles(
-  "users",
-  "user-123",
-  { bio: "Updated bio" },
-  { avatar: newAvatarFile }
-);
-```
+### Fixed
 
-### Authentication Methods
-
-#### `registerWithFiles(email, password, data?, files?)`
-
-Register a new user with file uploads.
-
-```typescript
-await db.registerWithFiles(
-  "john@example.com",
-  "password123",
-  { username: "johndoe" },
-  { avatar: avatarFile }
-);
-```
-
-#### `updateUserWithFiles(data?, email?, password?, files?)`
-
-Update current user with file uploads.
-
-```typescript
-await db.updateUserWithFiles({ bio: "Updated" }, undefined, undefined, {
-  avatar: newAvatarFile,
-});
-```
+- Minor formatting inconsistencies in code
+- Improved error messages and suggestions
 
 ---
 
-## 🎯 Key Features
+## [1.1.0] - 2025-11-04
 
-### Simple Field Naming
+### Added
 
-- Name your file parameter = document field name
-- `{ avatar: file }` → Document gets `avatar` field with URL
-- `{ gallery: [file1, file2] }` → Document gets `gallery` array with URLs
+#### File Upload Features
+- 📤 **File upload support for collections and authentication**
 
-### Flexible File Handling
+#### New Methods
 
-- ✅ Single files: `{ avatar: file }`
-- ✅ Multiple files (array): `{ gallery: [file1, file2, file3] }`
-- ✅ Mixed: `{ avatar: file, gallery: [file1, file2] }`
+**Collection Methods:**
 
-### Automatic Storage
+- `createDocumentWithFiles<T>(collection, data, files)` - Create a document with file uploads
 
-- Files uploaded to cloud storage
-- URLs automatically returned in response
-- Stored in project-specific buckets
+- `updateDocumentWithFiles<T>(collection, docId, data?, files?)` - Update a document with file uploads
 
-### Full TypeScript Support
+**Authentication Methods:**
 
-- Type-safe method signatures
-- Generic type parameters
-- Proper error handling
+- `registerWithFiles(email, password, data?, files?)` - Register a new user with file uploads
+- `updateUserWithFiles(data?, email?, password?, files?)` - Update current user with file uploads
 
----
+- **Simple Field Naming**: File parameter names map directly to document fields
+- **Flexible File Handling**: Support for single files and arrays
+- **Automatic Storage**: Files uploaded to cloud storage with auto-generated URLs
+- **Full TypeScript Support**: Type-safe method signatures with generics
 
-## 📚 Documentation
+- Added `docs/FileUploads.md` with complete file upload guide
+- Added `docs/Relationships.md` for relationships and population
+- Added `docs/QueryFiltering.md` for advanced query filtering
+- Updated `README.md` with file upload examples
+- Added comprehensive examples in `examples/` directory
 
-### New Documentation Files
+### Backward Compatibility
 
-1. **`docs/FileUploads.md`** - Complete file upload guide
-
-   - Collection file uploads
-   - User authentication with files
-   - React examples
-   - Best practices
-
-2. **`docs/Relationships.md`** - Relationships & population guide
-
-   - Setting up relationships
-   - Population strategies
-   - Filtering by relationships
-   - Field selection
-
-3. **`docs/QueryFiltering.md`** - Advanced query filtering
-   - 12 operators (eq, ne, gt, gte, lt, lte, contains, etc.)
-   - AND/OR logic
-   - Multi-field OR
-   - Named OR groups
-
-### Updated Documentation
-
-- **`README.md`** - Added file upload section
-- **`examples/file-upload-examples.ts`** - Comprehensive examples
-- **`examples/advanced-queries.ts`** - Query examples with relationships
+- All existing methods remain unchanged
+- New methods are additions, not replacements
+- No breaking changes
 
 ---
 
-## 🔧 Implementation Details
+## [1.0.3] - 2025-10-31
 
-### How It Works
+### Fixed
+- Removed Content-Type header from uploadFile request for proper multipart/form-data handling
+- Updated BASEURL configuration
 
-1. **FormData Construction**: Files are added to FormData with field names
-2. **No Manual Headers**: Content-Type is automatically set by the browser
-3. **Server Processing**: Server maps file names to document fields
-4. **URL Generation**: Uploaded files get unique URLs
-5. **Response**: Document returned with file URLs in specified fields
+### Changed
+- Improved file upload endpoint handling
 
-### Example Request Flow
+---
+
+## [1.0.2] - 2025-10-30
+
+### Changed
+- Updated BASEURL to new API endpoint
+- Fixed upload file endpoint path
+
+---
+
+## [1.0.1] - 2025-10-29
+
+### Added
+- Filtering support for query operations
+
+---
+
+## [1.0.0] - 2025-09-11
+
+### Initial Release
+
+#### Core Features
+
+- **Document Operations**
+  - Create, read, update, delete documents
+  - List documents with filtering
+  - Batch operations (create, update, delete multiple documents)
+  - Count documents with filters
+  - Aggregate operations (count, sum, avg, min, max)
+
+- **Authentication**
+  - Email/password registration and login
+  - Google OAuth integration
+  - Session management with local storage
+  - User profile management
+  - Role-based access control
+
+- **Query System**
+  - 12 filter operators (eq, ne, gt, gte, lt, lte, contains, startswith, endswith, in, notin, isnull)
+  - AND/OR logic support
+  - Multi-field OR searches
+  - Named OR groups
+  - Sorting and pagination
+  - Field selection
+  - Relationship population
+
+- **Real-time Features**
+  - WebSocket connections for live data
+  - Collection watching
+  - Event-based updates
+
+- **Cloud Functions**
+  - Execute server-side Python functions
+  - GET and POST support
+  - Payload handling
+  - Automatic token authentication
+
+- **TypeScript Support**
+  - Full type definitions
+  - Generic type parameters
+  - Comprehensive interfaces
+  - Excellent IDE autocomplete
+
+---
+
+## Release History Summary
+
+| Version | Date | Key Features |
+|---------|------|--------------|
+| 1.2.0 | 2025-11-11 | Comprehensive documentation, JSDoc comments, enhanced types |
+| 1.1.0 | 2025-11-04 | File upload support, relationship population, advanced queries |
+| 1.0.3 | 2025-10-31 | File upload fixes, BASEURL updates |
+| 1.0.2 | 2025-10-30 | API endpoint updates |
+| 1.0.1 | 2025-10-29 | Query filtering support |
+| 1.0.0 | 2025-09-11 | Initial release with core features |
+
+---
+
+## Upgrade Guide
+
+### From 1.1.0 to 1.2.0
+
+No breaking changes. Simply update:
+
+```bash
+npm install cocobase@latest
+```
+
+Benefits:
+- Better IDE autocomplete with JSDoc comments
+- Comprehensive documentation site
+- Improved TypeScript definitions
+
+### From 1.0.x to 1.1.0
+
+No breaking changes. New file upload methods available:
 
 ```typescript
-// Client code
+// Old way (still works)
+await db.createDocument('users', { name: 'John' });
+
+// New way (with files)
 await db.createDocumentWithFiles('users',
   { name: 'John' },
   { avatar: file }
 );
-
-// Generates FormData:
-// - data: {"name":"John"}
-// - avatar: <file blob>
-
-// Server response:
-{
-  id: 'user-123',
-  data: {
-    name: 'John',
-    avatar: 'https://storage.cocobase.buzz/.../avatar.jpg'
-  }
-}
 ```
 
 ---
 
-## 🎨 Usage Examples
+## Contributing
 
-### Simple Avatar Upload
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-```typescript
-const avatarFile = document.querySelector("#avatar").files[0];
+## Support
 
-await db.createDocumentWithFiles(
-  "users",
-  { name: "John Doe" },
-  { avatar: avatarFile }
-);
-```
-
-### Product with Gallery
-
-```typescript
-const mainImage = document.querySelector("#main").files[0];
-const gallery = Array.from(document.querySelector("#gallery").files);
-
-await db.createDocumentWithFiles(
-  "products",
-  { name: "Laptop", price: 1299 },
-  {
-    main_image: mainImage,
-    gallery: gallery,
-  }
-);
-```
-
-### User Registration
-
-```typescript
-await db.registerWithFiles(
-  "john@example.com",
-  "password123",
-  { username: "johndoe" },
-  { avatar: avatarFile, cover_photo: coverFile }
-);
-```
-
-### Update Avatar Only
-
-```typescript
-await db.updateUserWithFiles(undefined, undefined, undefined, {
-  avatar: newAvatarFile,
-});
-```
+- 📖 [Documentation](https://docs.cocobase.buzz)
+- 💬 [Discord Community](https://discord.gg/cocobase)
+- 🐛 [Report Issues](https://github.com/lordace-coder/coco_base_js/issues)
+- 📧 [Email Support](mailto:hello@cocobase.buzz)
 
 ---
 
-## 🚀 Benefits
-
-1. **Simplicity**: Just name your file fields
-2. **No Complex Mapping**: No JSON indices or field mapping needed
-3. **TypeScript Support**: Full type safety
-4. **Flexible**: Single or multiple files
-5. **Integrated**: Works seamlessly with auth and collections
-6. **Automatic**: Storage and URL generation handled automatically
-
----
-
-## 📋 Migration Guide
-
-### Before (No File Support)
-
-```typescript
-// Had to manually upload files separately
-const fileUrl = await uploadFile(file);
-await db.createDocument("users", {
-  name: "John",
-  avatar: fileUrl, // Manual URL
-});
-```
-
-### After (With File Support)
-
-```typescript
-// One call, automatic upload and URL generation
-await db.createDocumentWithFiles(
-  "users",
-  { name: "John" },
-  { avatar: file } // Automatic!
-);
-```
-
----
-
-## ✅ Backward Compatibility
-
-All existing methods still work:
-
-- `createDocument()` - No breaking changes
-- `updateDocument()` - No breaking changes
-- `register()` - No breaking changes
-- `updateUser()` - No breaking changes
-
-New methods are additions, not replacements!
-
----
-
-## 🧪 Testing
-
-Run examples:
-
-```bash
-npm run test
-```
-
-Check examples:
-
-- `examples/file-upload-examples.ts`
-- `examples/advanced-queries.ts`
-- `test/query-filter.test.ts`
-
----
-
-## 📦 Package Updates
-
-### Files Modified
-
-- `src/core/core.ts` - Added file upload methods
-- `src/core/file.ts` - Fixed multipart boundary issue
-- `src/core/functions.ts` - Updated base URL
-- `src/types/types.ts` - Added populate and select to Query interface
-- `src/utils/utils.ts` - Enhanced buildFilterQuery for relationships
-- `src/index.ts` - Exported new types
-
-### Files Added
-
-- `docs/FileUploads.md`
-- `docs/Relationships.md`
-- `docs/QueryFiltering.md`
-- `examples/file-upload-examples.ts`
-- `examples/advanced-queries.ts`
-- `test/query-filter.test.ts`
-
----
-
-## 🎯 Next Steps
-
-1. **Build the package**: `npm run build`
-2. **Test thoroughly**: Use the examples
-3. **Update version**: Bump package version
-4. **Publish**: `npm publish`
-5. **Update docs**: Update online documentation
-
----
-
-## 📞 Support
-
-For issues or questions:
-
-- GitHub Issues: [Report bugs](https://github.com/lordace-coder/coco_base_js/issues)
-- Documentation: See `docs/` directory
-- Examples: See `examples/` directory
-
----
-
-**Version**: 1.1.0 (Suggested)  
-**Release Date**: November 4, 2025  
-**Breaking Changes**: None  
-**New Features**: File uploads, relationships, advanced filtering
+Made with ❤️ by the Cocobase team

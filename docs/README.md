@@ -1,0 +1,54 @@
+# Cocobase JavaScript SDK Documentation
+
+This directory contains comprehensive documentation for the Cocobase JavaScript/TypeScript SDK.
+
+## Documentation Structure
+
+### Getting Started
+- **[intro.md](intro.md)** - Introduction and overview of Cocobase
+- **[getting-started/installation.md](getting-started/installation.md)** - Installation guide with framework-specific setup
+- **[getting-started/quickstart.md](getting-started/quickstart.md)** - 5-minute quickstart tutorial
+- **[getting-started/configuration.md](getting-started/configuration.md)** - Complete configuration guide
+
+### Guides
+- **[guides/crud-operations.md](guides/crud-operations.md)** - Complete guide to Create, Read, Update, Delete operations
+- **[FileUploads.md](FileUploads.md)** - File upload features and usage
+- **[QueryFiltering.md](QueryFiltering.md)** - Advanced query filtering with operators
+- **[Relationships.md](Relationships.md)** - Relationships and population guide
+
+### Other
+- **[Message.md](Message.md)** - Messaging features
+- **[Troubleshooting-ProjectId.md](Troubleshooting-ProjectId.md)** - ProjectId troubleshooting
+
+## Documentation Features
+
+All documentation includes:
+- ✅ Beginner-friendly explanations
+- ✅ TypeScript code examples
+- ✅ Framework-specific guides (React, Vue, Next.js, etc.)
+- ✅ Best practices and common patterns
+- ✅ Troubleshooting tips
+- ✅ Error handling examples
+
+## Quick Links
+
+- [Installation Guide](getting-started/installation.md)
+- [5-Minute Quickstart](getting-started/quickstart.md)
+- [CRUD Operations](guides/crud-operations.md)
+- [File Uploads](FileUploads.md)
+- [Query Filtering](QueryFiltering.md)
+
+## Contributing
+
+When adding new documentation:
+1. Use clear, beginner-friendly language
+2. Include TypeScript examples
+3. Add code comments
+4. Provide real-world use cases
+5. Include error handling
+
+## Support
+
+- 🐛 [Report Issues](https://github.com/lordace-coder/coco_base_js/issues)
+- 💬 [Discord Community](https://discord.gg/cocobase)
+- 📧 [Email](mailto:hello@cocobase.buzz)

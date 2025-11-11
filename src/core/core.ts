@@ -4,7 +4,11 @@ import {
   TokenResponse,
   AppUser,
   Query,
+  AppUserList,
+  GoogleLoginResponse,
   Connection,
+  AggregateResults,
+  AggregateParams,
 } from "../types/types";
 import {
   BASEURL,
@@ -13,10 +17,39 @@ import {
   mergeUserData,
   setToLocalStorage,
 } from "../utils/utils";
-
 import { closeConnection as closeCon } from "../utils/socket";
 import { CloudFunction } from "./functions";
 
+/**
+ * Main Cocobase client for interacting with the Cocobase backend API.
+ *
+ * Provides methods for:
+ * - Document CRUD operations (Create, Read, Update, Delete)
+ * - User authentication and management
+ * - File uploads
+ * - Real-time data synchronization
+ * - Cloud functions execution
+ * - Batch operations
+ * - Advanced querying and aggregations
+ *
+ * @example
+ * ```typescript
+ * // Initialize the client
+ * const db = new Cocobase({
+ *   apiKey: 'your-api-key',
+ *   projectId: 'your-project-id'
+ * });
+ *
+ * // Create a document
+ * await db.createDocument('users', { name: 'John Doe' });
+ *
+ * // Query documents
+ * const users = await db.listDocuments('users', {
+ *   filters: { status: 'active' },
+ *   limit: 10
+ * });
+ * ```
+ */
 export class Cocobase {
   private baseURL: string;
   apiKey?: string;
@@ -25,6 +58,22 @@ export class Cocobase {
   user?: AppUser;
   functions: CloudFunction;
 
+  /**
+   * Creates a new Cocobase client instance.
+   *
+   * @param config - Configuration object for the client
+   * @param config.apiKey - Your Cocobase API key (required for most operations)
+   * @param config.projectId - Your Cocobase project ID (required for cloud functions)
+   * @param config.baseURL - Optional custom base URL (defaults to https://api.cocobase.buzz)
+   *
+   * @example
+   * ```typescript
+   * const db = new Cocobase({
+   *   apiKey: 'your-api-key',
+   *   projectId: 'your-project-id'
+   * });
+   * ```
+   */
   constructor(config: CocobaseConfig) {
     this.baseURL = config.baseURL ?? BASEURL;
     this.apiKey = config.apiKey;
@@ -36,6 +85,11 @@ export class Cocobase {
     );
   }
 
+  /**
+   * Gets the current authentication token.
+   *
+   * @returns The current JWT token, or undefined if not authenticated
+   */
   getToken(): string | undefined {
     return this.token;
   }
@@ -109,7 +163,20 @@ export class Cocobase {
     }
   }
 
-  // Fetch a single document
+  /**
+   * Retrieves a single document by ID from a collection.
+   *
+   * @template T - The type of the document data
+   * @param collection - Name of the collection
+   * @param docId - Unique ID of the document
+   * @returns Promise resolving to the document with metadata
+   *
+   * @example
+   * ```typescript
+   * const user = await db.getDocument('users', 'user-123');
+   * console.log(user.data.name);
+   * ```
+   */
   async getDocument<T = any>(
     collection: string,
     docId: string
@@ -120,7 +187,23 @@ export class Cocobase {
     );
   }
 
-  // Create a new document
+  /**
+   * Creates a new document in a collection.
+   *
+   * @template T - The type of the document data
+   * @param collection - Name of the collection
+   * @param data - Document data to store
+   * @returns Promise resolving to the created document with metadata
+   *
+   * @example
+   * ```typescript
+   * const newUser = await db.createDocument('users', {
+   *   name: 'John Doe',
+   *   email: 'john@example.com',
+   *   age: 30
+   * });
+   * ```
+   */
   async createDocument<T = any>(
     collection: string,
     data: T
@@ -201,7 +284,23 @@ export class Cocobase {
     return res.json() as Promise<Document<T>>;
   }
 
-  // Update a document
+  /**
+   * Updates an existing document in a collection.
+   *
+   * @template T - The type of the document data
+   * @param collection - Name of the collection
+   * @param docId - Unique ID of the document to update
+   * @param data - Partial document data to update (only specified fields are updated)
+   * @returns Promise resolving to the updated document with metadata
+   *
+   * @example
+   * ```typescript
+   * await db.updateDocument('users', 'user-123', {
+   *   age: 31,
+   *   status: 'active'
+   * });
+   * ```
+   */
   async updateDocument<T = any>(
     collection: string,
     docId: string,
@@ -281,7 +380,18 @@ export class Cocobase {
     return res.json() as Promise<Document<T>>;
   }
 
-  // Delete a document
+  /**
+   * Deletes a document from a collection.
+   *
+   * @param collection - Name of the collection
+   * @param docId - Unique ID of the document to delete
+   * @returns Promise resolving to a success status object
+   *
+   * @example
+   * ```typescript
+   * await db.deleteDocument('users', 'user-123');
+   * ```
+   */
   async deleteDocument(
     collection: string,
     docId: string
@@ -292,7 +402,31 @@ export class Cocobase {
     );
   }
 
-  // List documents
+  /**
+   * Lists documents from a collection with optional filtering and pagination.
+   *
+   * @template T - The type of the document data
+   * @param collection - Name of the collection
+   * @param query - Optional query parameters for filtering, sorting, and pagination
+   * @returns Promise resolving to an array of documents
+   *
+   * @example
+   * ```typescript
+   * // Simple query
+   * const users = await db.listDocuments('users', {
+   *   filters: { status: 'active' },
+   *   limit: 10
+   * });
+   *
+   * // Advanced query with sorting
+   * const posts = await db.listDocuments('posts', {
+   *   filters: { published: true },
+   *   sort: 'createdAt',
+   *   order: 'desc',
+   *   limit: 20
+   * });
+   * ```
+   */
   async listDocuments<T = any>(
     collection: string,
     query?: Query
@@ -305,7 +439,18 @@ export class Cocobase {
     );
   }
 
-  // authentication features
+  /**
+   * Initializes authentication by restoring the session from local storage.
+   * Call this method when your application loads to restore user sessions.
+   *
+   * @example
+   * ```typescript
+   * await db.initAuth();
+   * if (db.isAuthenticated()) {
+   *   console.log('User is logged in:', db.user);
+   * }
+   * ```
+   */
   async initAuth() {
     const token = getFromLocalStorage("cocobase-token");
     const user = getFromLocalStorage("cocobase-user");
@@ -322,11 +467,29 @@ export class Cocobase {
     }
   }
 
+  /**
+   * Sets the authentication token and stores it in local storage.
+   *
+   * @param token - JWT authentication token
+   */
   setToken(token: string) {
     this.token = token;
     setToLocalStorage("cocobase-token", token);
   }
 
+  /**
+   * Authenticates a user with email and password.
+   *
+   * @param email - User's email address
+   * @param password - User's password
+   * @returns Promise that resolves when login is complete
+   *
+   * @example
+   * ```typescript
+   * await db.login('user@example.com', 'password123');
+   * console.log('Logged in as:', db.user.email);
+   * ```
+   */
   async login(email: string, password: string) {
     const response = this.request<TokenResponse>(
       `POST`,
@@ -336,9 +499,25 @@ export class Cocobase {
     );
     this.token = (await response).access_token;
     this.setToken(this.token);
-    this.user = await this.getCurrentUser();
+    await this.getCurrentUser();
   }
 
+  /**
+   * Registers a new user with email, password, and optional additional data.
+   *
+   * @param email - User's email address
+   * @param password - User's password
+   * @param data - Optional additional user data
+   * @returns Promise that resolves when registration is complete
+   *
+   * @example
+   * ```typescript
+   * await db.register('user@example.com', 'password123', {
+   *   username: 'johndoe',
+   *   fullName: 'John Doe'
+   * });
+   * ```
+   */
   async register(email: string, password: string, data?: Record<string, any>) {
     const response = this.request<TokenResponse>(
       `POST`,
@@ -348,6 +527,44 @@ export class Cocobase {
     );
     this.token = (await response).access_token;
     this.setToken(this.token);
+    await this.getCurrentUser();
+  }
+
+  /**
+   * Initiates Google OAuth login flow.
+   *
+   * @returns Promise resolving to an object with the Google OAuth URL
+   *
+   * @example
+   * ```typescript
+   * const { url } = await db.loginWithGoogle();
+   * window.location.href = url; // Redirect to Google login
+   * ```
+   */
+  async loginWithGoogle() {
+    return (await this.request(
+      `GET`,
+      "/auth-collections/login-google"
+    )) as GoogleLoginResponse;
+  }
+
+  /**
+   * Completes the Google OAuth login flow after redirect.
+   *
+   * @param token - JWT token received from OAuth callback
+   * @returns Promise that resolves when login is complete
+   *
+   * @example
+   * ```typescript
+   * // After Google redirects back to your app with a token
+   * const token = new URLSearchParams(window.location.search).get('token');
+   * if (token) {
+   *   await db.completeGoogleLogin(token);
+   * }
+   * ```
+   */
+  async completeGoogleLogin(token: string) {
+    this.setToken(token);
     await this.getCurrentUser();
   }
 
@@ -607,5 +824,91 @@ export class Cocobase {
   }
   closeConnection(name: string) {
     closeCon(name);
+  }
+
+  // AUTH COLLECTION ROUTES
+  listUsers<T = any>(query?: Query): Promise<AppUserList> {
+    const query_str = buildFilterQuery(query);
+
+    return this.request<AppUserList>(
+      "GET",
+      `/auth-collections/users${query_str ? `?${query_str}` : ""}`
+    );
+  }
+
+  getUserById<T = any>(userId: string): Promise<AppUser> {
+    return this.request<AppUser>("GET", `/auth-collections/users/${userId}`);
+  }
+
+  // BATCH OPERATIONS
+  async deleteDocuments(
+    collection: string,
+    docIds: string[]
+  ): Promise<{ status: string; message: string; count: number }> {
+    return this.request<{ status: string; message: string; count: number }>(
+      "POST",
+      `/collections/${collection}/batch/documents/delete`,
+      { document_ids: docIds },
+      false
+    );
+  }
+
+  async createDocuments<T = any>(
+    collection: string,
+    documents: T[]
+  ): Promise<Document<T>[]> {
+    return this.request<Document<T>[]>(
+      "POST",
+      `/collections/${collection}/batch/documents/create`,
+      { documents },
+      false
+    );
+  }
+  /**
+   * Batch update documents
+   *
+   * @param collection - Collection name
+   * @param updates - Object mapping document IDs to partial update objects.
+   *   Example: { "docId1": { fieldA: "value" }, "docId2": { fieldB: 2 } }
+   */
+  async updateDocuments<T = any>(
+    collection: string,
+    updates: Record<string, Partial<T>>
+  ): Promise<Document<T>[]> {
+    return this.request<Document<T>[]>(
+      "POST",
+      `/collections/${collection}/batch/documents/update`,
+      { updates },
+      false
+    );
+  }
+  /**
+   * Count documents matching filters without returning the documents.
+   *
+   * Example:
+   *  await db.countDocuments('users', { status: 'active', age_gte: 18 })
+   *  // returns { count: 42 }
+   */
+  async countDocuments(
+    collection: string,
+    query?: Query
+  ): Promise<{ count: number }> {
+    const query_str = buildFilterQuery(query);
+    return this.request<{ count: number }>(
+      "GET",
+      `/collections/${collection}/query/documents/count${
+        query_str ? `?${query_str}` : ""
+      }`
+    );
+  }
+
+  async aggregateDocuments(collection: string, params:AggregateParams):Promise<AggregateResults> {
+    const query_str = buildFilterQuery(params.query);
+    return (await this.request<any>(
+      "GET",
+      `/collections/${collection}/query/documents/aggregate?field=${params.field}&operation=${params.operation}&${
+        query_str ? `${query_str}` : ""
+      }`
+    )) as AggregateResults;
   }
 }
