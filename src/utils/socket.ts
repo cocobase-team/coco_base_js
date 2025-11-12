@@ -1,4 +1,4 @@
-import { Connection } from "../types/types";
+import { Connection } from "../types/types.js";
 
 const connection_store: Connection[] = [];
 

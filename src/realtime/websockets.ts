@@ -1,5 +1,5 @@
-import { Cocobase as cb } from "../core/core";
-import { BASEURL } from "../utils/utils";
+import { Cocobase as cb } from "../core/core.js";
+import { BASEURL } from "../utils/utils.js";
 
 // handle the plain functionality first
 

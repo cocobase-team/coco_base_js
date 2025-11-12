@@ -1,5 +1,5 @@
-import { BASEURL } from "../utils/utils";
-import { Cocobase } from "./core";
+import { BASEURL } from "../utils/utils.js";
+import { Cocobase } from "./core.js";
 
 /**
  * Response from a successful file upload.

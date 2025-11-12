@@ -1,13 +1,13 @@
-import { Cocobase } from "./core/core";
-import type { CocobaseConfig, Document, Collection } from "./types/types";
+import { Cocobase } from "./core/core.js";
+import type { CocobaseConfig, Document, Collection } from "./types/types.js";
 import {
   getFromLocalStorage,
   mergeUserData,
   setToLocalStorage,
   buildFilterQuery,
   parseFilterKey,
-} from "./utils/utils";
-import { uploadFile } from "./core/file";
+} from "./utils/utils.js";
+import { uploadFile } from "./core/file.js";
 
 export {
   Cocobase,

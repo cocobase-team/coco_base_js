@@ -1,5 +1,5 @@
-import { Query } from "../types/types";
-import type { FilterOperator, ParsedFilterKey } from "../types/filter";
+import { Query } from "../types/types.js";
+import type { FilterOperator, ParsedFilterKey } from "../types/filter.js";
 
 function getFromLocalStorage(key: string): string | null {
   try {

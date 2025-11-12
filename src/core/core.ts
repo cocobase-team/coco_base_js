@@ -9,16 +9,16 @@ import {
   Connection,
   AggregateResults,
   AggregateParams,
-} from "../types/types";
+} from "../types/types.js";
 import {
   BASEURL,
   buildFilterQuery,
   getFromLocalStorage,
   mergeUserData,
   setToLocalStorage,
-} from "../utils/utils";
-import { closeConnection as closeCon } from "../utils/socket";
-import { CloudFunction } from "./functions";
+} from "../utils/utils.js";
+import { closeConnection as closeCon } from "../utils/socket.js";
+import { CloudFunction } from "./functions.js";
 
 /**
  * Main Cocobase client for interacting with the Cocobase backend API.
