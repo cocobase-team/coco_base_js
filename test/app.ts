@@ -3,7 +3,6 @@ import { Cocobase } from "../src/index.ts";
 import { ref } from "process";
 
 const db = new Cocobase({
-
 });
 
 // todo test updateDocuments (batch request)
@@ -21,15 +20,13 @@ const db = new Cocobase({
 // /collections/{id}/export
 // Export Collection
 async function run() {
-  const res = await db.aggregateDocuments("payment_proofs",{
-    field:"amount",
-    operation:"sum",
-    query:{
-      filters:{
-        status:"PENDING"
-      }
-    }
+  const users = await db.auth.listUsers({
+    filters: {
+      "data.referral_balance_gte":20
+    },
+    limit:2
   });
-  console.log(res);
+
+  console.log(JSON.stringify(users,null,2));
 }
 run();

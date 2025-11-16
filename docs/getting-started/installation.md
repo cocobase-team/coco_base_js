@@ -16,9 +16,15 @@ Before you begin, ensure you have:
 
 ## Create a Cocobase Project
 
-1. Visit [cocobase.buzz](https://cocobase.buzz) and sign up
-2. Create a new project
-3. Copy your **API Key** and **Project ID** from the dashboard
+Before installing the SDK, you need to get your credentials:
+
+1. **Visit** [cocobase.buzz](https://cocobase.buzz) and sign up for a free account
+2. **Create a new project** in the dashboard
+3. **Copy your credentials** from the project dashboard:
+   - **API Key** - Used to authenticate all your API requests
+   - **Project ID** - Uniquely identifies your project
+
+> 💡 **Important:** After creating your project on [cocobase.buzz](https://cocobase.buzz), you'll see your **API Key** and **Project ID** prominently displayed in your project's dashboard. You'll need both of these to initialize the SDK. Keep them secure and never commit them to version control!
 
 ## Install the SDK
 
@@ -50,12 +56,14 @@ Create a test file to verify the installation:
 import { Cocobase } from 'cocobase';
 
 const db = new Cocobase({
-  apiKey: 'your-api-key-here',
-  projectId: 'your-project-id-here'
+  apiKey: 'your-api-key-here',        // From cocobase.buzz dashboard
+  projectId: 'your-project-id-here'   // From cocobase.buzz dashboard
 });
 
 console.log('Cocobase initialized successfully!');
 ```
+
+> 💡 Replace `'your-api-key-here'` and `'your-project-id-here'` with the actual credentials from your [cocobase.buzz](https://cocobase.buzz) project dashboard.
 
 Run the file:
 
@@ -101,6 +109,7 @@ export const db = new Cocobase({
 ```
 
 ```env title=".env.local"
+# Get these from cocobase.buzz after creating your project
 NEXT_PUBLIC_COCOBASE_API_KEY=your_api_key
 NEXT_PUBLIC_COCOBASE_PROJECT_ID=your_project_id
 ```
@@ -135,6 +144,7 @@ It's recommended to store your credentials in environment variables:
 ### Node.js
 
 ```env title=".env"
+# Get these from your project dashboard at cocobase.buzz
 COCOBASE_API_KEY=your_api_key
 COCOBASE_PROJECT_ID=your_project_id
 ```

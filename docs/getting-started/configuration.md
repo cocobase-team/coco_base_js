@@ -8,15 +8,19 @@ Learn how to configure the Cocobase SDK for your needs.
 
 ## Basic Configuration
 
-The minimal configuration requires an API key:
+The minimal configuration requires an API key and project ID:
 
 ```typescript
 import { Cocobase } from 'cocobase';
 
 const db = new Cocobase({
-  apiKey: 'your-api-key'
+  apiKey: 'your-api-key',        // From cocobase.buzz
+  projectId: 'your-project-id'   // From cocobase.buzz
 });
 ```
+
+> 💡 **Getting Your Credentials:**
+> Sign up at [cocobase.buzz](https://cocobase.buzz), create a project, and you'll find your **API Key** and **Project ID** displayed in your project dashboard.
 
 ## Full Configuration
 
@@ -40,26 +44,27 @@ const db = new Cocobase({
 ### apiKey
 
 - **Type:** `string`
-- **Required:** Yes (for most operations)
+- **Required:** Yes
 - **Description:** Your Cocobase API key for authentication
 
 ```typescript
 const db = new Cocobase({
-  apiKey: 'cb_1234567890abcdef'
+  apiKey: 'cb_1234567890abcdef',
+  projectId: 'proj_abc123'
 });
 ```
 
 :::tip Where to find your API key
-1. Log in to [Cocobase Dashboard](https://cocobase.buzz/dashboard)
-2. Select your project
-3. Go to Settings → API Keys
-4. Copy your API key
+1. Go to [cocobase.buzz](https://cocobase.buzz) and log in
+2. Select your project (or create a new one)
+3. Your **API Key** is displayed prominently in your project dashboard
+4. Copy your API key and keep it secure
 :::
 
 ### projectId
 
 - **Type:** `string`
-- **Required:** Yes (for cloud functions)
+- **Required:** Yes
 - **Description:** Your Cocobase project identifier
 
 ```typescript
@@ -68,9 +73,13 @@ const db = new Cocobase({
   projectId: 'proj_abc123'
 });
 
-// Now you can use cloud functions
+// Now you can use all Cocobase features
 await db.functions.execute('myFunction');
 ```
+
+:::tip Where to find your Project ID
+Your **Project ID** is displayed right next to your API Key in your project dashboard on [cocobase.buzz](https://cocobase.buzz). Both credentials are required to use the SDK.
+:::
 
 ### baseURL
 
@@ -229,6 +238,7 @@ export const db = new Cocobase({
 
 ```env title=".env"
 # Cocobase Configuration
+# Get these from your project dashboard at cocobase.buzz
 COCOBASE_API_KEY=your_api_key_here
 COCOBASE_PROJECT_ID=your_project_id_here
 
@@ -259,6 +269,7 @@ const db = new Cocobase({
 Next.js automatically loads `.env.local`:
 
 ```env title=".env.local"
+# Get from cocobase.buzz project dashboard
 NEXT_PUBLIC_COCOBASE_API_KEY=your_key
 NEXT_PUBLIC_COCOBASE_PROJECT_ID=your_project_id
 ```
@@ -266,6 +277,7 @@ NEXT_PUBLIC_COCOBASE_PROJECT_ID=your_project_id
 #### Vite / Vue
 
 ```env title=".env"
+# Get from cocobase.buzz project dashboard
 VITE_COCOBASE_API_KEY=your_key
 VITE_COCOBASE_PROJECT_ID=your_project_id
 ```

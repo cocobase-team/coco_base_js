@@ -12,6 +12,8 @@ This directory contains comprehensive documentation for the Cocobase JavaScript/
 
 ### Guides
 - **[guides/crud-operations.md](guides/crud-operations.md)** - Complete guide to Create, Read, Update, Delete operations
+- **[Authentication.md](Authentication.md)** - Complete authentication guide (v1.3.1+)
+- **[Migration-Guide.md](Migration-Guide.md)** - Upgrade from deprecated auth methods
 - **[FileUploads.md](FileUploads.md)** - File upload features and usage
 - **[QueryFiltering.md](QueryFiltering.md)** - Advanced query filtering with operators
 - **[Relationships.md](Relationships.md)** - Relationships and population guide
@@ -34,9 +36,27 @@ All documentation includes:
 
 - [Installation Guide](getting-started/installation.md)
 - [5-Minute Quickstart](getting-started/quickstart.md)
+- [Authentication Guide](Authentication.md) ⭐ New!
+- [Migration Guide](Migration-Guide.md) ⭐ New!
 - [CRUD Operations](guides/crud-operations.md)
 - [File Uploads](FileUploads.md)
 - [Query Filtering](QueryFiltering.md)
+
+## 🆕 What's New in v1.3.1
+
+**New Authentication Handler Architecture** - All auth methods now use the `db.auth.*` namespace:
+
+```typescript
+// ✅ New way (recommended)
+await db.auth.login("user@example.com", "password");
+const user = db.auth.getUser();
+
+// ❌ Old way (deprecated but still works)
+await db.login("user@example.com", "password");
+const user = db.user;
+```
+
+👉 See the [Migration Guide](Migration-Guide.md) for easy upgrade instructions.
 
 ## Contributing
 

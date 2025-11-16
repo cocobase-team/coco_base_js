@@ -28,13 +28,16 @@ Go from idea to MVP in minutes, not weeks:
 import { Cocobase } from 'cocobase';
 
 const db = new Cocobase({
-  apiKey: 'your-api-key',
-  projectId: 'your-project-id'
+  apiKey: 'your-api-key',        // Get from cocobase.buzz
+  projectId: 'your-project-id'   // Get from cocobase.buzz
 });
 
 // You're ready to build!
 await db.createDocument('users', { name: 'John Doe' });
 ```
+
+> 💡 **Getting Your Credentials:**
+> Sign up at [cocobase.buzz](https://cocobase.buzz), create a project, and you'll find your **API Key** and **Project ID** in your project dashboard.
 
 ### TypeScript-First
 
@@ -71,8 +74,11 @@ Here's a complete example of creating a simple blog post system:
 ```typescript
 import { Cocobase } from 'cocobase';
 
-// Initialize
-const db = new Cocobase({ apiKey: 'your-key' });
+// Initialize with credentials from cocobase.buzz
+const db = new Cocobase({
+  apiKey: 'your-key',
+  projectId: 'your-project-id'
+});
 
 // Create a post
 const post = await db.createDocument('posts', {

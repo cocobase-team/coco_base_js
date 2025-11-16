@@ -14,13 +14,16 @@ First, create a new file and initialize the Cocobase client:
 import { Cocobase } from 'cocobase';
 
 const db = new Cocobase({
-  apiKey: 'your-api-key',
-  projectId: 'your-project-id'
+  apiKey: 'your-api-key',        // Get from cocobase.buzz
+  projectId: 'your-project-id'   // Get from cocobase.buzz
 });
 ```
 
-:::tip
-Get your API key and Project ID from your [Cocobase Dashboard](https://cocobase.buzz/dashboard)
+:::tip Where to get your credentials
+1. Go to [cocobase.buzz](https://cocobase.buzz) and sign up
+2. Create a new project
+3. Your **API Key** and **Project ID** will be displayed in your project dashboard
+4. Copy and paste them into your code (or better yet, use environment variables!)
 :::
 
 ## Step 2: Create Your First Document
@@ -122,10 +125,10 @@ Here's the complete task manager:
 ```typescript title="task-manager.ts"
 import { Cocobase } from 'cocobase';
 
-// Initialize
+// Initialize with credentials from cocobase.buzz
 const db = new Cocobase({
-  apiKey: 'your-api-key',
-  projectId: 'your-project-id'
+  apiKey: 'your-api-key',        // From cocobase.buzz dashboard
+  projectId: 'your-project-id'   // From cocobase.buzz dashboard
 });
 
 interface Task {

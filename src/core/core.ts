@@ -19,6 +19,7 @@ import {
 } from "../utils/utils.js";
 import { closeConnection as closeCon } from "../utils/socket.js";
 import { CloudFunction } from "./functions.js";
+import AuthHandler from "./auth.js";
 
 /**
  * Main Cocobase client for interacting with the Cocobase backend API.
@@ -55,9 +56,8 @@ export class Cocobase {
   apiKey?: string;
   private token?: string;
   projectId?: string;
-  user?: AppUser;
   functions: CloudFunction;
-
+  auth: AuthHandler;
   /**
    * Creates a new Cocobase client instance.
    *
@@ -78,20 +78,41 @@ export class Cocobase {
     this.baseURL = config.baseURL ?? BASEURL;
     this.apiKey = config.apiKey;
     this.projectId = config.projectId;
-
+    this.auth = new AuthHandler(config);
     this.functions = new CloudFunction(
       config.projectId || "project id required",
-      () => this.token
+      () => this.auth.getToken()
     );
   }
 
   /**
    * Gets the current authentication token.
    *
+   * @deprecated Use `db.auth.getToken()` instead. This method will be removed in a future version.
    * @returns The current JWT token, or undefined if not authenticated
    */
   getToken(): string | undefined {
-    return this.token;
+    return this.auth.getToken();
+  }
+
+  /**
+   * Gets the current user object.
+   *
+   * @deprecated Use `db.auth.getUser()` instead. This property will be removed in a future version.
+   * @returns The current user object, or undefined if not authenticated
+   */
+  get user(): AppUser | undefined {
+    return this.auth.getUser();
+  }
+
+  /**
+   * Sets the authentication token and stores it in local storage.
+   *
+   * @deprecated Use `db.auth.setToken()` instead. This method will be removed in a future version.
+   * @param token - JWT authentication token
+   */
+  setToken(token: string) {
+    this.auth.setToken(token);
   }
 
   private async request<T>(
@@ -108,7 +129,9 @@ export class Cocobase {
         headers: {
           "Content-Type": "application/json",
           ...(this.apiKey ? { "x-api-key": `${this.apiKey}` } : {}),
-          ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+          ...(this.auth.getToken()
+            ? { Authorization: `Bearer ${this.auth.getToken()}` }
+            : {}),
         },
         ...(body ? { body: JSON.stringify(data) } : {}),
       });
@@ -271,7 +294,9 @@ export class Cocobase {
       method: "POST",
       headers: {
         ...(this.apiKey ? { "x-api-key": `${this.apiKey}` } : {}),
-        ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+        ...(this.auth.getToken()
+          ? { Authorization: `Bearer ${this.auth.getToken()}` }
+          : {}),
       },
       body: formData,
     });
@@ -367,7 +392,9 @@ export class Cocobase {
       method: "PATCH",
       headers: {
         ...(this.apiKey ? { "x-api-key": `${this.apiKey}` } : {}),
-        ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+        ...(this.auth.getToken()
+          ? { Authorization: `Bearer ${this.auth.getToken()}` }
+          : {}),
       },
       body: formData,
     });
@@ -443,6 +470,7 @@ export class Cocobase {
    * Initializes authentication by restoring the session from local storage.
    * Call this method when your application loads to restore user sessions.
    *
+   * @deprecated Use `db.auth.initAuth()` instead. This method will be removed in a future version.
    * @example
    * ```typescript
    * await db.initAuth();
@@ -452,34 +480,13 @@ export class Cocobase {
    * ```
    */
   async initAuth() {
-    const token = getFromLocalStorage("cocobase-token");
-    const user = getFromLocalStorage("cocobase-user");
-    if (token) {
-      this.token = token;
-      if (user) {
-        this.user = JSON.parse(user) as AppUser;
-      } else {
-        this.user = undefined;
-        this.getCurrentUser();
-      }
-    } else {
-      this.token = undefined;
-    }
-  }
-
-  /**
-   * Sets the authentication token and stores it in local storage.
-   *
-   * @param token - JWT authentication token
-   */
-  setToken(token: string) {
-    this.token = token;
-    setToLocalStorage("cocobase-token", token);
+    return this.auth.initAuth();
   }
 
   /**
    * Authenticates a user with email and password.
    *
+   * @deprecated Use `db.auth.login()` instead. This method will be removed in a future version.
    * @param email - User's email address
    * @param password - User's password
    * @returns Promise that resolves when login is complete
@@ -491,20 +498,13 @@ export class Cocobase {
    * ```
    */
   async login(email: string, password: string) {
-    const response = this.request<TokenResponse>(
-      `POST`,
-      `/auth-collections/login`,
-      { email, password },
-      false // Do not use data key for auth endpoints
-    );
-    this.token = (await response).access_token;
-    this.setToken(this.token);
-    await this.getCurrentUser();
+    return this.auth.login(email, password);
   }
 
   /**
    * Registers a new user with email, password, and optional additional data.
    *
+   * @deprecated Use `db.auth.register()` instead. This method will be removed in a future version.
    * @param email - User's email address
    * @param password - User's password
    * @param data - Optional additional user data
@@ -519,20 +519,13 @@ export class Cocobase {
    * ```
    */
   async register(email: string, password: string, data?: Record<string, any>) {
-    const response = this.request<TokenResponse>(
-      `POST`,
-      `/auth-collections/signup`,
-      { email, password, data },
-      false // Do not use data key for auth endpoints
-    );
-    this.token = (await response).access_token;
-    this.setToken(this.token);
-    await this.getCurrentUser();
+    return this.auth.register(email, password, data);
   }
 
   /**
    * Initiates Google OAuth login flow.
    *
+   * @deprecated Use `db.auth.loginWithGoogle()` instead. This method will be removed in a future version.
    * @returns Promise resolving to an object with the Google OAuth URL
    *
    * @example
@@ -542,15 +535,13 @@ export class Cocobase {
    * ```
    */
   async loginWithGoogle() {
-    return (await this.request(
-      `GET`,
-      "/auth-collections/login-google"
-    )) as GoogleLoginResponse;
+    return this.auth.loginWithGoogle();
   }
 
   /**
    * Completes the Google OAuth login flow after redirect.
    *
+   * @deprecated Use `db.auth.completeGoogleLogin()` instead. This method will be removed in a future version.
    * @param token - JWT token received from OAuth callback
    * @returns Promise that resolves when login is complete
    *
@@ -564,13 +555,13 @@ export class Cocobase {
    * ```
    */
   async completeGoogleLogin(token: string) {
-    this.setToken(token);
-    await this.getCurrentUser();
+    return this.auth.completeGoogleLogin(token);
   }
 
   /**
    * Register a new user with file uploads (avatar, cover photo, etc.)
    *
+   * @deprecated Use `db.auth.registerWithFiles()` instead. This method will be removed in a future version.
    * @param email - User email
    * @param password - User password
    * @param data - Additional user data (optional)
@@ -601,96 +592,63 @@ export class Cocobase {
     data?: Record<string, any>,
     files?: Record<string, File | File[]>
   ): Promise<AppUser> {
-    const formData = new FormData();
-
-    // Add JSON data
-    formData.append("data", JSON.stringify({ email, password, data }));
-
-    // Add files with their field names if provided
-    if (files) {
-      for (const [fieldName, fileOrFiles] of Object.entries(files)) {
-        if (Array.isArray(fileOrFiles)) {
-          fileOrFiles.forEach((file) => {
-            formData.append(fieldName, file);
-          });
-        } else {
-          formData.append(fieldName, fileOrFiles);
-        }
-      }
-    }
-
-    const url = `${this.baseURL}/auth-collections/signup`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        ...(this.apiKey ? { "x-api-key": `${this.apiKey}` } : {}),
-      },
-      body: formData,
-    });
-
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(`Registration failed: ${errorText}`);
-    }
-
-    const response = (await res.json()) as TokenResponse & { user: AppUser };
-    this.token = response.access_token;
-    this.setToken(this.token);
-    this.user = response.user;
-    setToLocalStorage("cocobase-user", JSON.stringify(response.user));
-
-    return response.user;
+    return this.auth.registerWithFiles(email, password, data, files);
   }
 
+  /**
+   * Logs out the current user by clearing the token and user data.
+   *
+   * @deprecated Use `db.auth.logout()` instead. This method will be removed in a future version.
+   *
+   * @example
+   * ```typescript
+   * db.logout();
+   * console.log('User logged out');
+   * ```
+   */
   logout() {
-    this.token = undefined;
-  }
-  isAuthenticated(): boolean {
-    return !!this.token;
-  }
-  async getCurrentUser(): Promise<AppUser> {
-    if (!this.token) {
-      throw new Error("User is not authenticated");
-    }
-    const user = await this.request("GET", `/auth-collections/user`);
-    if (!user) {
-      throw new Error("Failed to fetch current user");
-    }
-    this.user = user as AppUser;
-    setToLocalStorage("cocobase-user", JSON.stringify(user));
-    return user as AppUser;
+    this.auth.logout();
   }
 
+  /**
+   * Checks if a user is currently authenticated.
+   *
+   * @deprecated Use `db.auth.isAuthenticated()` instead. This method will be removed in a future version.
+   * @returns True if user is authenticated, false otherwise
+   *
+   * @example
+   * ```typescript
+   * if (db.isAuthenticated()) {
+   *   console.log('User is logged in');
+   * }
+   * ```
+   */
+  isAuthenticated(): boolean {
+    return this.auth.isAuthenticated();
+  }
+
+  /**
+   * @deprecated Use `db.auth.getCurrentUser()` instead. This method will be removed in a future version.
+   */
+  async getCurrentUser(): Promise<AppUser> {
+    return this.auth.getCurrentUser();
+  }
+
+  /**
+   * @deprecated Use `db.auth.updateUser()` instead. This method will be removed in a future version.
+   */
   async updateUser(
     data?: Record<string, any> | null,
     email?: string | null,
     password?: string | null
   ): Promise<AppUser> {
-    if (!this.token) {
-      throw new Error("User is not authenticated");
-    }
-
-    // Build request body by excluding null or undefined values
-    const body: Record<string, any> = {};
-    if (data != null) body.data = mergeUserData(this.user?.data || {}, data);
-    if (email != null) body.email = email;
-    if (password != null) body.password = password;
-
-    const user = await this.request(
-      "PATCH",
-      "/auth-collections/user",
-      body,
-      false
-    );
-
-    this.user = user as AppUser;
-    setToLocalStorage("cocobase-user", JSON.stringify(user));
-    return user as AppUser;
+    return this.auth.updateUser(data, email, password);
   }
 
   /**
    * Update current user with file uploads
    *
+   * @deprecated Use `db.auth.updateUserWithFiles()` instead. This method will be removed in a future version.
    * @param data - User data to update (optional)
    * @param email - New email (optional)
    * @param password - New password (optional)
@@ -726,55 +684,7 @@ export class Cocobase {
     password?: string | null,
     files?: Record<string, File | File[]>
   ): Promise<AppUser> {
-    if (!this.token) {
-      throw new Error("User is not authenticated");
-    }
-
-    const formData = new FormData();
-
-    // Build request body by excluding null or undefined values
-    const body: Record<string, any> = {};
-    if (data != null) body.data = mergeUserData(this.user?.data || {}, data);
-    if (email != null) body.email = email;
-    if (password != null) body.password = password;
-
-    // Add JSON data if there's any
-    if (Object.keys(body).length > 0) {
-      formData.append("data", JSON.stringify(body));
-    }
-
-    // Add files with their field names if provided
-    if (files) {
-      for (const [fieldName, fileOrFiles] of Object.entries(files)) {
-        if (Array.isArray(fileOrFiles)) {
-          fileOrFiles.forEach((file) => {
-            formData.append(fieldName, file);
-          });
-        } else {
-          formData.append(fieldName, fileOrFiles);
-        }
-      }
-    }
-
-    const url = `${this.baseURL}/auth-collections/user`;
-    const res = await fetch(url, {
-      method: "PATCH",
-      headers: {
-        ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
-      },
-      body: formData,
-    });
-
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(`User update failed: ${errorText}`);
-    }
-
-    const user = (await res.json()) as AppUser;
-    this.user = user;
-    setToLocalStorage("cocobase-user", JSON.stringify(user));
-
-    return user;
+    return this.auth.updateUserWithFiles(data, email, password, files);
   }
 
   watchCollection(
@@ -816,28 +726,61 @@ export class Cocobase {
       },
     };
   }
+  /**
+   * Checks if the current user has a specific role.
+   *
+   * @deprecated Use `db.auth.hasRole()` instead. This method will be removed in a future version.
+   * @param role - Role to check for
+   * @returns True if user has the role, false otherwise
+   *
+   * @example
+   * ```typescript
+   * if (db.hasRole('admin')) {
+   *   console.log('User is an admin');
+   * }
+   * ```
+   */
   hasRole(role: string): boolean {
-    if (!this.user) {
-      throw new Error("User is not authenticated");
-    }
-    return this.user.roles.includes(role);
-  }
-  closeConnection(name: string) {
-    closeCon(name);
+    return this.auth.hasRole(role);
   }
 
   // AUTH COLLECTION ROUTES
+  /**
+   * Lists users from the auth collection with optional filtering and pagination.
+   *
+   * @deprecated Use `db.auth.listUsers()` instead. This method will be removed in a future version.
+   * @template T - The type of user data
+   * @param query - Optional query parameters for filtering, sorting, and pagination
+   * @returns Promise resolving to a list of users
+   *
+   * @example
+   * ```typescript
+   * const users = await db.listUsers({
+   *   filters: { status: 'active' },
+   *   limit: 10
+   * });
+   * ```
+   */
   listUsers<T = any>(query?: Query): Promise<AppUserList> {
-    const query_str = buildFilterQuery(query);
-
-    return this.request<AppUserList>(
-      "GET",
-      `/auth-collections/users${query_str ? `?${query_str}` : ""}`
-    );
+    return this.auth.listUsers(query);
   }
 
+  /**
+   * Gets a user by their ID.
+   *
+   * @deprecated Use `db.auth.getUserById()` instead. This method will be removed in a future version.
+   * @template T - The type of user data
+   * @param userId - Unique ID of the user
+   * @returns Promise resolving to the user object
+   *
+   * @example
+   * ```typescript
+   * const user = await db.getUserById('user-123');
+   * console.log('User:', user.email);
+   * ```
+   */
   getUserById<T = any>(userId: string): Promise<AppUser> {
-    return this.request<AppUser>("GET", `/auth-collections/users/${userId}`);
+    return this.auth.getUserById(userId);
   }
 
   // BATCH OPERATIONS
@@ -902,13 +845,16 @@ export class Cocobase {
     );
   }
 
-  async aggregateDocuments(collection: string, params:AggregateParams):Promise<AggregateResults> {
+  async aggregateDocuments(
+    collection: string,
+    params: AggregateParams
+  ): Promise<AggregateResults> {
     const query_str = buildFilterQuery(params.query);
     return (await this.request<any>(
       "GET",
-      `/collections/${collection}/query/documents/aggregate?field=${params.field}&operation=${params.operation}&${
-        query_str ? `${query_str}` : ""
-      }`
+      `/collections/${collection}/query/documents/aggregate?field=${
+        params.field
+      }&operation=${params.operation}&${query_str ? `${query_str}` : ""}`
     )) as AggregateResults;
   }
 }

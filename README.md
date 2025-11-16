@@ -12,7 +12,10 @@ Go from idea to MVP in minutes, not weeks. No server configuration, no database 
 
 ```typescript
 // This is literally all you need to start
-const db = new Cocobase({ apiKey: "your-key" });
+const db = new Cocobase({
+  apiKey: "your-key",          // From cocobase.buzz
+  projectId: "your-project-id" // From cocobase.buzz
+});
 await db.createDocument("users", { name: "John" });
 ```
 
@@ -22,8 +25,10 @@ Built-in user management that actually works. Registration, login, sessions, and
 
 ```typescript
 // User registration + automatic login in one line
-await db.register("user@example.com", "password", { role: "admin" });
+await db.auth.register("user@example.com", "password", { role: "admin" });
 ```
+
+> 💡 **New in v1.3.1:** All auth methods now use the `db.auth.*` namespace for better organization. Old methods still work but are deprecated. See our [Migration Guide](docs/Migration-Guide.md).
 
 ### 📊 **Real-time Data Management**
 
@@ -277,27 +282,71 @@ const posts = await db.listDocuments("posts");
 
 Ready to build something amazing? Here's how to get started:
 
-1. **Visit** [cocobase.buzz](https://cocobase.buzz)
-2. **Sign up** for a free account
-3. **Create** your first project
-4. **Install** the SDK: `npm install cocobase`
-5. **Start building** awesome things!
+### 1. Get Your Credentials
+
+1. **Visit** [cocobase.buzz](https://cocobase.buzz) and sign up for a free account
+2. **Create** your first project in the dashboard
+3. **Copy your credentials** from the project dashboard:
+   - **API Key** - Used to authenticate your requests
+   - **Project ID** - Identifies your project
+
+> 💡 **Where to find your credentials:**
+> After creating a project on [cocobase.buzz](https://cocobase.buzz), you'll find your **API Key** and **Project ID** in your project's dashboard. Keep these secure and never commit them to version control!
+
+### 2. Install the SDK
+
+```bash
+npm install cocobase
+```
+
+### 3. Start Building
 
 ```typescript
 import { Cocobase } from "cocobase";
 
-const db = new Cocobase({ apiKey: "your-api-key" });
+const db = new Cocobase({
+  apiKey: "your-api-key",        // Get from cocobase.buzz
+  projectId: "your-project-id"   // Get from cocobase.buzz
+});
 
 // You're ready to build! 🎉
 ```
 
+## 🆕 What's New in v1.3.1
+
+### New Authentication Handler Architecture
+
+All authentication methods are now organized under the `db.auth.*` namespace for better code organization and maintainability:
+
+```typescript
+// ✅ New way (recommended)
+await db.auth.login("user@example.com", "password");
+const user = db.auth.getUser();
+const token = db.auth.getToken();
+
+// ❌ Old way (deprecated but still works)
+await db.login("user@example.com", "password");
+const user = db.user;
+const token = db.getToken();
+```
+
+**Benefits:**
+- 🏗️ Better code organization
+- 📚 Comprehensive JSDoc documentation
+- 🔄 Enhanced state management
+- 🛡️ Improved error handling
+
+**Migration:** Old methods still work but are deprecated. See our **[Migration Guide](docs/Migration-Guide.md)** for easy upgrade instructions.
+
 ## 📚 Resources
 
 - **[Documentation](https://docs.cocobase.buzz)** - Comprehensive guides and API reference
+- **[Migration Guide](docs/Migration-Guide.md)** - Upgrade from deprecated auth methods
 - **[Examples](https://github.com/cocobase/examples)** - Sample projects and tutorials
 - **[Community](https://discord.gg/cocobase)** - Join our developer community
 - **[Blog](https://blog.cocobase.buzz)** - Tips, tutorials, and updates
 - **[Status](https://status.cocobase.buzz)** - Service status and uptime
+- **[Changelog](CHANGELOG.md)** - See what's new in each version
 
 ## 🤝 Community & Support
 
