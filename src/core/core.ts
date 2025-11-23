@@ -18,6 +18,12 @@ import {
 } from "../utils/utils.js";
 import { CloudFunction } from "./functions.js";
 import AuthHandler from "./auth.js";
+import {
+  CollectionWatcher,
+  ProjectBroadcast,
+  RoomChat,
+  listRooms,
+} from "../realtime/websockets.js";
 
 /**
  * Main Cocobase client for interacting with the Cocobase backend API.
@@ -57,6 +63,18 @@ export class Cocobase {
   functions: CloudFunction;
   auth: AuthHandler;
   /**
+   * Realtime helper factories. Use `db.realtime.collection(...)`, `db.realtime.broadcast(...)`, `db.realtime.room(...)`, or `db.realtime.listRooms()`.
+   */
+  realtime: {
+    collection: (
+      collectionName: string,
+      filters?: Record<string, any>
+    ) => CollectionWatcher;
+    broadcast: (userId?: string, userName?: string) => ProjectBroadcast;
+    room: (roomId: string, userId?: string, userName?: string) => RoomChat;
+    listRooms: () => Promise<any>;
+  };
+  /**
    * Creates a new Cocobase client instance.
    *
    * @param config - Configuration object for the client
@@ -81,6 +99,16 @@ export class Cocobase {
       config.projectId || "project id required",
       () => this.auth.getToken()
     );
+    // realtime factories bound to this client configuration
+    this.realtime = {
+      collection: (collectionName: string, filters?: Record<string, any>) =>
+        new CollectionWatcher(collectionName, this.apiKey || "", filters),
+      broadcast: (userId?: string, userName?: string) =>
+        new ProjectBroadcast(this.apiKey || "", userId, userName),
+      room: (roomId: string, userId?: string, userName?: string) =>
+        new RoomChat(roomId, this.apiKey || "", userId, userName),
+      listRooms: async () => listRooms(this.apiKey || ""),
+    };
   }
 
   /**
@@ -680,7 +708,9 @@ export class Cocobase {
     onOpen: () => void = () => {},
     onError: () => void = () => {}
   ): void {
-  throw new Error("watchCollection is deprecated; use the Realtime helpers in src/realtime/websockets.ts instead");
+    throw new Error(
+      "watchCollection is deprecated; use the Realtime helpers in src/realtime/websockets.ts instead"
+    );
   }
   /**
    * Checks if the current user has a specific role.

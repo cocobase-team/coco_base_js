@@ -3,188 +3,258 @@ import { BASEURL } from "../utils/utils.js";
 type Listener = (data: any) => void;
 
 class ReconnectingWebSocket {
-	private url: string;
-	private authData: any;
-	private ws: WebSocket | null = null;
-	private reconnectDelay = 1000;
-	private maxReconnectDelay = 30000;
-	private pingInterval?: number;
+  private url: string;
+  private authData: any;
+  private ws: WebSocket | null = null;
+  private reconnectDelay = 1000;
+  private maxReconnectDelay = 30000;
+  private pingInterval?: ReturnType<typeof setInterval>;
 
-	constructor(url: string, authData: any) {
-		this.url = url;
-		this.authData = authData;
-	}
+  constructor(url: string, authData: any) {
+    this.url = url;
+    this.authData = authData;
+  }
 
-	connect() {
-		this.ws = new WebSocket(this.url);
+  connect() {
+    this.ws = new WebSocket(this.url);
 
-		this.ws.onopen = () => {
-			this.reconnectDelay = 1000;
-			this.ws?.send(JSON.stringify(this.authData));
+    this.ws.onopen = () => {
+      this.reconnectDelay = 1000;
+      this.ws?.send(JSON.stringify(this.authData));
 
-			// start ping/pong
-			this.pingInterval = window.setInterval(() => {
-				if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-					this.ws.send(JSON.stringify({ type: "ping" }));
-				}
-			}, 30000);
-		};
+      // start ping/pong (use globalThis so Node environment works)
+      this.pingInterval = globalThis.setInterval(() => {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+          this.ws.send(JSON.stringify({ type: "ping" }));
+        }
+      }, 30000);
+    };
 
-		this.ws.onclose = () => {
-			if (this.pingInterval) clearInterval(this.pingInterval);
-			setTimeout(() => {
-				this.reconnectDelay = Math.min(
-					this.reconnectDelay * 2,
-					this.maxReconnectDelay
-				);
-				this.connect();
-			}, this.reconnectDelay);
-		};
-	}
+    this.ws.onclose = () => {
+      if (this.pingInterval) clearInterval(this.pingInterval);
+      setTimeout(() => {
+        this.reconnectDelay = Math.min(
+          this.reconnectDelay * 2,
+          this.maxReconnectDelay
+        );
+        this.connect();
+      }, this.reconnectDelay);
+    };
+  }
 
-	send(msg: any) {
-		if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-			this.ws.send(JSON.stringify(msg));
-		}
-	}
+  send(msg: any) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(msg));
+    }
+  }
 
-	close() {
-		if (this.ws) this.ws.close();
-		if (this.pingInterval) clearInterval(this.pingInterval);
-	}
+  close() {
+    if (this.ws) this.ws.close();
+    if (this.pingInterval) clearInterval(this.pingInterval as any);
+  }
 
-	onMessage(cb: (ev: MessageEvent) => void) {
-		if (!this.ws) return;
-		this.ws.onmessage = cb;
-	}
+  onMessage(cb: (ev: MessageEvent) => void) {
+    if (!this.ws) return;
+    this.ws.onmessage = cb;
+  }
 }
 
 export class CollectionWatcher {
-	private url: string;
-	private apiKey: string;
-	private filters: Record<string, any> | undefined;
-	private reconnecting?: ReconnectingWebSocket;
-	private listeners: Record<string, Listener[]> = {};
+  private url: string;
+  private apiKey: string;
+  private filters: Record<string, any> | undefined;
+  private reconnecting?: ReconnectingWebSocket;
 
-	constructor(collectionName: string, apiKey: string, filters?: Record<string, any>) {
-		this.url = `${BASEURL.replace(/^http/, 'ws')}/realtime/collections/${collectionName}`;
-		this.apiKey = apiKey;
-		this.filters = filters;
-	}
+  private _onConnected?: Listener;
+  private _onCreate?: Listener;
+  private _onUpdate?: Listener;
+  private _onDelete?: Listener;
+  private _onError?: Listener;
+  private _onClose?: Listener;
 
-	connect() {
-		this.reconnecting = new ReconnectingWebSocket(this.url, { api_key: this.apiKey, filters: this.filters });
-		this.reconnecting.connect();
-		this.reconnecting.onMessage((ev) => {
-			const data = JSON.parse(ev.data);
-			const eventType = data.event;
-			(this.listeners[eventType] || []).forEach((cb) => cb(data));
-		});
-	}
+  constructor(
+    collectionName: string,
+    apiKey: string,
+    filters?: Record<string, any>
+  ) {
+    this.url = `${BASEURL.replace(
+      /^http/,
+      "ws"
+    )}/realtime/collections/${collectionName}`;
+    this.apiKey = apiKey;
+    this.filters = filters;
+  }
 
-	on(event: string, cb: Listener) {
-		if (!this.listeners[event]) this.listeners[event] = [];
-		this.listeners[event].push(cb);
-	}
+  connect() {
+    this.reconnecting = new ReconnectingWebSocket(this.url, {
+      api_key: this.apiKey,
+      filters: this.filters,
+    });
+    this.reconnecting.connect();
+    this.reconnecting.onMessage((ev) => {
+      try {
+        const data = JSON.parse(ev.data);
+        const eventType = data.event;
+        switch (eventType) {
+          case "connected":
+            this._onConnected?.(data);
+            break;
+          case "create":
+            this._onCreate?.(data);
+            break;
+          case "update":
+            this._onUpdate?.(data);
+            break;
+          case "delete":
+            this._onDelete?.(data);
+            break;
+          default:
+            // unknown event
+            break;
+        }
+      } catch (err) {
+        this._onError?.({ error: err });
+      }
+    });
+  }
 
-	disconnect() {
-		this.reconnecting?.close();
-	}
+  onConnected(cb: Listener) {
+    this._onConnected = cb;
+  }
+
+  onCreate(cb: Listener) {
+    this._onCreate = cb;
+  }
+
+  onUpdate(cb: Listener) {
+    this._onUpdate = cb;
+  }
+
+  onDelete(cb: Listener) {
+    this._onDelete = cb;
+  }
+
+  onError(cb: Listener) {
+    this._onError = cb;
+  }
+
+  onClose(cb: Listener) {
+    this._onClose = cb;
+  }
+
+  disconnect() {
+    this._onClose?.({});
+    this.reconnecting?.close();
+  }
 }
 
 export class ProjectBroadcast {
-	private url = `${BASEURL.replace(/^http/, 'ws')}/realtime/broadcast`;
-	private apiKey: string;
-	private userId?: string;
-	private userName?: string;
-	private reconnecting?: ReconnectingWebSocket;
-	private listeners: Listener[] = [];
+  private url = `${BASEURL.replace(/^http/, "ws")}/realtime/broadcast`;
+  private apiKey: string;
+  private userId?: string;
+  private userName?: string;
+  private reconnecting?: ReconnectingWebSocket;
+  private listeners: Listener[] = [];
 
-	constructor(apiKey: string, userId?: string, userName?: string) {
-		this.apiKey = apiKey;
-		this.userId = userId;
-		this.userName = userName;
-	}
+  constructor(apiKey: string, userId?: string, userName?: string) {
+    this.apiKey = apiKey;
+    this.userId = userId;
+    this.userName = userName;
+  }
 
-	connect() {
-		this.reconnecting = new ReconnectingWebSocket(this.url, { api_key: this.apiKey, user_id: this.userId, user_name: this.userName });
-		this.reconnecting.connect();
-		this.reconnecting.onMessage((ev) => {
-			const data = JSON.parse(ev.data);
-			if (data.type === 'message') {
-				this.listeners.forEach(cb => cb(data));
-			}
-		});
-	}
+  connect() {
+    this.reconnecting = new ReconnectingWebSocket(this.url, {
+      api_key: this.apiKey,
+      user_id: this.userId,
+      user_name: this.userName,
+    });
+    this.reconnecting.connect();
+    this.reconnecting.onMessage((ev) => {
+      const data = JSON.parse(ev.data);
+      if (data.type === "message") {
+        this.listeners.forEach((cb) => cb(data));
+      }
+    });
+  }
 
-	send(data: any) {
-		this.reconnecting?.send({ type: 'message', data });
-	}
+  send(data: any) {
+    this.reconnecting?.send({ type: "message", data });
+  }
 
-	onMessage(cb: Listener) {
-		this.listeners.push(cb);
-	}
+  onMessage(cb: Listener) {
+    this.listeners.push(cb);
+  }
 
-	disconnect() {
-		this.reconnecting?.close();
-	}
+  disconnect() {
+    this.reconnecting?.close();
+  }
 }
 
 export class RoomChat {
-	private url: string;
-	private apiKey: string;
-	private userId?: string;
-	private userName?: string;
-	private reconnecting?: ReconnectingWebSocket;
-	private listeners: Record<string, Listener[]> = {};
+  private url: string;
+  private apiKey: string;
+  private userId?: string;
+  private userName?: string;
+  private reconnecting?: ReconnectingWebSocket;
+  private listeners: Record<string, Listener[]> = {};
 
-	constructor(roomId: string, apiKey: string, userId?: string, userName?: string) {
-		this.url = `${BASEURL.replace(/^http/, 'ws')}/realtime/rooms/${roomId}`;
-		this.apiKey = apiKey;
-		this.userId = userId;
-		this.userName = userName;
-	}
+  constructor(
+    roomId: string,
+    apiKey: string,
+    userId?: string,
+    userName?: string
+  ) {
+    this.url = `${BASEURL.replace(/^http/, "ws")}/realtime/rooms/${roomId}`;
+    this.apiKey = apiKey;
+    this.userId = userId;
+    this.userName = userName;
+  }
 
-	create(roomTitle?: string) {
-		this._connect('create', roomTitle);
-	}
+  create(roomTitle?: string) {
+    this._connect("create", roomTitle);
+  }
 
-	join() {
-		this._connect('join');
-	}
+  join() {
+    this._connect("join");
+  }
 
-	private _connect(action: 'create' | 'join', roomTitle?: string) {
-		this.reconnecting = new ReconnectingWebSocket(this.url, { api_key: this.apiKey, user_id: this.userId, user_name: this.userName, action, room_title: roomTitle });
-		this.reconnecting.connect();
-		this.reconnecting.onMessage((ev) => {
-			const data = JSON.parse(ev.data);
-			const eventType = data.event || data.type;
-			(this.listeners[eventType] || []).forEach(cb => cb(data));
-		});
-	}
+  private _connect(action: "create" | "join", roomTitle?: string) {
+    this.reconnecting = new ReconnectingWebSocket(this.url, {
+      api_key: this.apiKey,
+      user_id: this.userId,
+      user_name: this.userName,
+      action,
+      room_title: roomTitle,
+    });
+    this.reconnecting.connect();
+    this.reconnecting.onMessage((ev) => {
+      const data = JSON.parse(ev.data);
+      const eventType = data.event || data.type;
+      (this.listeners[eventType] || []).forEach((cb) => cb(data));
+    });
+  }
 
-	sendMessage(content: any) {
-		this.reconnecting?.send({ type: 'message', content });
-	}
+  sendMessage(content: any) {
+    this.reconnecting?.send({ type: "message", content });
+  }
 
-	on(event: string, cb: Listener) {
-		if (!this.listeners[event]) this.listeners[event] = [];
-		this.listeners[event].push(cb);
-	}
+  on(event: string, cb: Listener) {
+    if (!this.listeners[event]) this.listeners[event] = [];
+    this.listeners[event].push(cb);
+  }
 
-	leave() {
-		this.reconnecting?.close();
-	}
+  leave() {
+    this.reconnecting?.close();
+  }
 }
 
 export async function listRooms(apiKey: string) {
-	const res = await fetch(`${BASEURL}/realtime/rooms`, {
-		headers: { 'X-API-Key': apiKey }
-	});
-	if (!res.ok) {
-		const text = await res.text();
-		throw new Error(`Failed to list rooms: ${text}`);
-	}
-	return res.json();
+  const res = await fetch(`${BASEURL}/realtime/rooms`, {
+    headers: { "X-API-Key": apiKey },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to list rooms: ${text}`);
+  }
+  return res.json();
 }
-
