@@ -5,6 +5,27 @@ All notable changes to the Cocobase JavaScript SDK will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### ✨ Added
+
+#### Authentication Callbacks System
+
+- 🎯 **Framework-Agnostic Callbacks**: New callback system for responding to authentication events
+- 🔔 **Event Hooks**: Support for `onLogin`, `onRegister`, `onLogout`, `onUserUpdate`, `onTokenChange`, and `onAuthStateChange`
+- ⚛️ **Framework Integration**: Seamless integration with React, Vue, Svelte, Angular, and other frameworks
+- 📚 **Comprehensive Examples**: Detailed documentation with real-world examples for popular frameworks
+- 🧹 **Cleanup Support**: `clearAuthCallbacks()` method for proper cleanup when components unmount
+
+```typescript
+// Register callbacks to handle auth state changes
+db.auth.onAuthEvent({
+  onLogin: (user, token) => setUser(user),
+  onLogout: () => setUser(null),
+  onUserUpdate: (user) => setUser(user)
+});
+```
+
 ## [1.3.1] - 2025-11-16
 
 ### ✨ Added
@@ -14,7 +35,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔐 **Dedicated Auth Handler**: Complete separation of authentication logic into `AuthHandler` class
 - 🏗️ **Clean Architecture**: All auth methods now accessible via `db.auth.*` namespace
 - 📚 **Comprehensive JSDoc**: Full documentation for all auth methods with examples
-- 🔄 **Backward Compatibility**: Core auth methods marked as `@deprecated` but still functional
+- 🔄 **Backward Compatibility**: Core auth methods marked as `@deprecated` but still functional (except Google OAuth)
+
+#### Google OAuth Modernization
+
+- ✅ **Google ID Token Verification**: New secure authentication flow using Google Identity Services
+- 🌐 **Platform Support**: Explicit platform parameter ('web', 'mobile', 'ios', 'android')
+- 📱 **Mobile Ready**: Full React Native support with `@react-native-google-signin/google-signin`
+- 🎨 **Better UX**: Support for Google One-Tap and custom button implementations
+- 🔒 **Enhanced Security**: Direct ID token verification instead of redirect flow
 
 #### Enhanced Authentication Features
 
@@ -43,6 +72,35 @@ await db.auth.login("user@example.com", "password");
 const token = db.auth.getToken();
 const user = db.auth.getUser();
 ```
+
+#### ⚠️ **BREAKING CHANGE**: Google OAuth
+
+The Google OAuth implementation has been completely redesigned:
+
+```typescript
+// ❌ OLD (REMOVED - NO LONGER WORKS)
+const { url } = await db.loginWithGoogle();
+window.location.href = url;
+await db.completeGoogleLogin(token);
+
+// ✅ NEW (REQUIRED)
+// Use Google Identity Services
+google.accounts.id.initialize({
+  client_id: 'YOUR_CLIENT_ID',
+  callback: async (response) => {
+    const user = await db.auth.loginWithGoogle(response.credential, 'web');
+  }
+});
+```
+
+**Why this change?**
+- More secure (direct ID token verification)
+- Better user experience (no redirects)
+- Cross-platform consistency
+- Follows Google's latest best practices
+- Supports One-Tap and custom UIs
+
+See [Migration Guide](docs/Migration-Guide.md#example-6-google-oauth) and [Google OAuth Examples](docs/examples/GoogleOAuth.md) for complete implementation details.
 
 #### Core Architecture
 

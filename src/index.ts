@@ -18,7 +18,7 @@ export {
   buildFilterQuery,
   parseFilterKey,
 };
-export type { TokenResponse, AppUser, Query } from "./types/types";
+export type { TokenResponse, AppUser, Query, AuthCallbacks, AuthEvent, AuthCallback } from "./types/types";
 export type { CocobaseConfig, Document, Collection };
 export type {
   FilterOperator,

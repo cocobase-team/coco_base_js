@@ -6,7 +6,6 @@ import {
   Query,
   AppUserList,
   GoogleLoginResponse,
-  Connection,
   AggregateResults,
   AggregateParams,
 } from "../types/types.js";
@@ -17,7 +16,6 @@ import {
   mergeUserData,
   setToLocalStorage,
 } from "../utils/utils.js";
-import { closeConnection as closeCon } from "../utils/socket.js";
 import { CloudFunction } from "./functions.js";
 import AuthHandler from "./auth.js";
 
@@ -523,39 +521,27 @@ export class Cocobase {
   }
 
   /**
-   * Initiates Google OAuth login flow.
+   * Authenticates a user using Google Sign-In with ID token.
    *
    * @deprecated Use `db.auth.loginWithGoogle()` instead. This method will be removed in a future version.
-   * @returns Promise resolving to an object with the Google OAuth URL
+   * @param idToken - Google ID token obtained from Google Sign-In
+   * @param platform - Optional platform identifier ('web', 'mobile', 'ios', 'android')
+   * @returns Promise resolving to the authenticated user object
    *
    * @example
    * ```typescript
-   * const { url } = await db.loginWithGoogle();
-   * window.location.href = url; // Redirect to Google login
+   * // New recommended way
+   * const user = await db.auth.loginWithGoogle(idToken, 'web');
+   *
+   * // Old way (deprecated)
+   * const user = await db.loginWithGoogle(idToken, 'web');
    * ```
    */
-  async loginWithGoogle() {
-    return this.auth.loginWithGoogle();
-  }
-
-  /**
-   * Completes the Google OAuth login flow after redirect.
-   *
-   * @deprecated Use `db.auth.completeGoogleLogin()` instead. This method will be removed in a future version.
-   * @param token - JWT token received from OAuth callback
-   * @returns Promise that resolves when login is complete
-   *
-   * @example
-   * ```typescript
-   * // After Google redirects back to your app with a token
-   * const token = new URLSearchParams(window.location.search).get('token');
-   * if (token) {
-   *   await db.completeGoogleLogin(token);
-   * }
-   * ```
-   */
-  async completeGoogleLogin(token: string) {
-    return this.auth.completeGoogleLogin(token);
+  async loginWithGoogle(
+    idToken: string,
+    platform?: "web" | "mobile" | "ios" | "android"
+  ): Promise<AppUser> {
+    return this.auth.loginWithGoogle(idToken, platform);
   }
 
   /**
@@ -693,38 +679,8 @@ export class Cocobase {
     connectionName?: string,
     onOpen: () => void = () => {},
     onError: () => void = () => {}
-  ): Connection {
-    const socket = new WebSocket(
-      `${this.baseURL.replace("http", "ws")}/realtime/collections/${collection}`
-    );
-    socket.onerror = onError;
-    socket.onopen = () => {
-      console.log(
-        `WebSocket connection established for collection: ${collection}`
-      );
-      socket.send(JSON.stringify({ api_key: this.apiKey }));
-    };
-
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      callback({
-        event: data.event,
-        data: data.data as Document<any>,
-      });
-    };
-    socket.onopen = () => {
-      onOpen();
-    };
-    return {
-      socket,
-      name: connectionName || `watch-${collection}`,
-      closed: false,
-      close: () => {
-        if (socket.readyState === WebSocket.OPEN) {
-          socket.close();
-        }
-      },
-    };
+  ): void {
+  throw new Error("watchCollection is deprecated; use the Realtime helpers in src/realtime/websockets.ts instead");
   }
   /**
    * Checks if the current user has a specific role.

@@ -5,6 +5,7 @@ import {
   AppUserList,
   Query,
   GoogleLoginResponse,
+  AuthCallbacks,
 } from "../types/types.js";
 import {
   buildFilterQuery,
@@ -30,6 +31,7 @@ export class AuthHandler {
   private apiKey?: string;
   private token?: string;
   private user?: AppUser;
+  private callbacks: AuthCallbacks = {};
 
   /**
    * Creates a new AuthHandler instance.
@@ -39,6 +41,64 @@ export class AuthHandler {
   constructor(config: CocobaseConfig) {
     this.baseURL = config.baseURL ?? "https://api.cocobase.buzz";
     this.apiKey = config.apiKey;
+  }
+
+  /**
+   * Register callbacks for authentication events.
+   * This allows your application to respond to auth state changes in a framework-agnostic way.
+   *
+   * @param callbacks - Object containing callback functions for various auth events
+   *
+   * @example
+   * ```typescript
+   * // React example
+   * db.auth.onAuthEvent({
+   *   onLogin: (user, token) => {
+   *     setUser(user);
+   *     setIsAuthenticated(true);
+   *   },
+   *   onLogout: () => {
+   *     setUser(null);
+   *     setIsAuthenticated(false);
+   *   },
+   *   onUserUpdate: (user) => {
+   *     setUser(user);
+   *   }
+   * });
+   *
+   * // Vue example
+   * db.auth.onAuthEvent({
+   *   onLogin: (user, token) => {
+   *     store.commit('setUser', user);
+   *     store.commit('setToken', token);
+   *   },
+   *   onLogout: () => {
+   *     store.commit('clearAuth');
+   *   }
+   * });
+   *
+   * // Svelte example
+   * db.auth.onAuthEvent({
+   *   onLogin: (user, token) => {
+   *     userStore.set(user);
+   *     tokenStore.set(token);
+   *   },
+   *   onLogout: () => {
+   *     userStore.set(null);
+   *     tokenStore.set(null);
+   *   }
+   * });
+   * ```
+   */
+  onAuthEvent(callbacks: AuthCallbacks): void {
+    this.callbacks = { ...this.callbacks, ...callbacks };
+  }
+
+  /**
+   * Remove all registered callbacks.
+   */
+  clearAuthCallbacks(): void {
+    this.callbacks = {};
   }
 
   /**
@@ -52,12 +112,13 @@ export class AuthHandler {
 
   /**
    * Sets the authentication token and stores it in local storage.
-   *
+   
    * @param token - JWT authentication token
    */
   setToken(token: string) {
     this.token = token;
     setToLocalStorage("cocobase-token", token);
+    this.callbacks.onTokenChange?.(token);
   }
 
   /**
@@ -97,9 +158,10 @@ export class AuthHandler {
   ): Promise<T> {
     const url = `${this.baseURL}${path}`;
     const data = useDataKey ? { data: body } : body;
-
+    console.log("request made")
     try {
       const res = await fetch(url, {
+        
         method,
         headers: {
           "Content-Type": "application/json",
@@ -193,6 +255,9 @@ export class AuthHandler {
     } else {
       this.token = undefined;
     }
+
+    // Trigger auth state change callback
+    this.callbacks.onAuthStateChange?.(this.user, this.token);
   }
 
   /**
@@ -209,15 +274,24 @@ export class AuthHandler {
    * ```
    */
   async login(email: string, password: string) {
-    const response = this.request<TokenResponse>(
+    const response = await this.request<TokenResponse>(
       "POST",
       `/auth-collections/login`,
       { email, password },
       false // Do not use data key for auth endpoints
     );
-    this.token = (await response).access_token;
+    this.token = response.access_token;
     this.setToken(this.token);
-    await this.getCurrentUser();
+    if (!response.user) {
+      await this.getCurrentUser();
+    } else {
+      this.setUser(response.user);
+    }
+
+    // Trigger login callback
+    if (this.user) {
+      this.callbacks.onLogin?.(this.user, this.token);
+    }
   }
 
   /**
@@ -237,53 +311,78 @@ export class AuthHandler {
    * ```
    */
   async register(email: string, password: string, data?: Record<string, any>) {
-    const response = this.request<TokenResponse>(
+    const response = await this.request<TokenResponse>(
       "POST",
       `/auth-collections/signup`,
       { email, password, data },
       false // Do not use data key for auth endpoints
     );
-    this.token = (await response).access_token;
+    this.token = response.access_token;
     this.setToken(this.token);
-    await this.getCurrentUser();
+    if (!response.user) {
+      await this.getCurrentUser();
+    }else{
+      this.setUser(response.user)
+    }
+
+    // Trigger register callback
+    if (this.user) {
+      this.callbacks.onRegister?.(this.user, this.token);
+    }
   }
 
   /**
-   * Initiates Google OAuth login flow.
+   * Authenticates a user using Google Sign-In with ID token.
    *
-   * @returns Promise resolving to an object with the Google OAuth URL
+   * This method verifies the Google ID token and either creates a new user
+   * or logs in an existing user who registered with Google OAuth.
+   *
+   * @param idToken - Google ID token obtained from Google Sign-In
+   * @param platform - Optional platform identifier ('web', 'mobile', 'ios', 'android')
+   * @returns Promise resolving to the authenticated user object
+   *
+   * @throws {Error} If Google Sign-In is not enabled in project settings
+   * @throws {Error} If the Google ID token is invalid or expired
+   * @throws {Error} If email is already registered with password authentication
+   * @throws {Error} If email is already registered with Apple Sign-In
    *
    * @example
    * ```typescript
-   * const { url } = await db.auth.loginWithGoogle();
-   * window.location.href = url; // Redirect to Google login
+   * // Web - Using Google Identity Services
+   * google.accounts.id.initialize({
+   *   client_id: 'YOUR_GOOGLE_CLIENT_ID',
+   *   callback: async (response) => {
+   *     const user = await db.auth.loginWithGoogle(response.credential, 'web');
+   *     console.log('Logged in:', user.email);
+   *   }
+   * });
+   *
+   * // Mobile - After getting ID token from Google Sign-In SDK
+   * const user = await db.auth.loginWithGoogle(idToken, 'mobile');
    * ```
    */
-  async loginWithGoogle() {
-    return (await this.request(
-      "GET",
-      "/auth-collections/login-google"
-    )) as GoogleLoginResponse;
-  }
+  async loginWithGoogle(
+    idToken: string,
+    platform?: "web" | "mobile" | "ios" | "android"
+  ): Promise<AppUser> {
+    const response = await this.request<{
+      access_token: string;
+      user: AppUser;
+    }>(
+      "POST",
+      "/auth-collections/google-verify",
+      { id_token: idToken, platform },
+      false
+    );
 
-  /**
-   * Completes the Google OAuth login flow after redirect.
-   *
-   * @param token - JWT token received from OAuth callback
-   * @returns Promise that resolves when login is complete
-   *
-   * @example
-   * ```typescript
-   * // After Google redirects back to your app with a token
-   * const token = new URLSearchParams(window.location.search).get('token');
-   * if (token) {
-   *   await db.auth.completeGoogleLogin(token);
-   * }
-   * ```
-   */
-  async completeGoogleLogin(token: string) {
-    this.setToken(token);
-    await this.getCurrentUser();
+    this.token = response.access_token;
+    this.setToken(response.access_token);
+    this.setUser(response.user);
+
+    // Trigger login callback
+    this.callbacks.onLogin?.(response.user, response.access_token);
+
+    return response.user;
   }
 
   /**
@@ -356,6 +455,9 @@ export class AuthHandler {
     this.setToken(response.access_token);
     this.setUser(response.user);
 
+    // Trigger register callback
+    this.callbacks.onRegister?.(response.user, response.access_token);
+
     return response.user;
   }
 
@@ -376,6 +478,11 @@ export class AuthHandler {
       localStorage.removeItem("cocobase-token");
       localStorage.removeItem("cocobase-user");
     }
+
+    // Trigger logout callback
+    this.callbacks.onLogout?.();
+    // Also trigger token change callback with undefined
+    this.callbacks.onTokenChange?.(undefined);
   }
 
   /**
@@ -458,6 +565,10 @@ export class AuthHandler {
 
     this.user = user as AppUser;
     this.setUser(user as AppUser);
+
+    // Trigger user update callback
+    this.callbacks.onUserUpdate?.(user as AppUser);
+
     return user as AppUser;
   }
 
@@ -546,6 +657,9 @@ export class AuthHandler {
     const user = (await res.json()) as AppUser;
     this.user = user;
     this.setUser(user);
+
+    // Trigger user update callback
+    this.callbacks.onUserUpdate?.(user);
 
     return user;
   }

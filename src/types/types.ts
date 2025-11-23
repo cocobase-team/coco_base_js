@@ -99,6 +99,7 @@ export interface Query {
 export interface TokenResponse {
   /** JWT access token for authenticated requests */
   access_token: string;
+  user:AppUser;
 }
 
 /**
@@ -147,4 +148,44 @@ export interface Connection {
   closed: boolean;
   /** Method to close the connection */
   close: () => void;
+}
+
+/**
+ * Authentication event types that can trigger callbacks.
+ */
+export type AuthEvent =
+  | "login"
+  | "register"
+  | "logout"
+  | "userUpdate"
+  | "tokenChange"
+  | "authStateChange";
+
+/**
+ * Callback function for authentication events.
+ *
+ * @param event - The type of authentication event that occurred
+ * @param data - Event-specific data (user object, token, etc.)
+ */
+export type AuthCallback = (
+  event: AuthEvent,
+  data: { user?: AppUser; token?: string }
+) => void;
+
+/**
+ * Collection of authentication event callbacks.
+ */
+export interface AuthCallbacks {
+  /** Called when a user logs in (email/password or Google) */
+  onLogin?: (user: AppUser, token: string) => void;
+  /** Called when a new user registers */
+  onRegister?: (user: AppUser, token: string) => void;
+  /** Called when a user logs out */
+  onLogout?: () => void;
+  /** Called when user data is updated */
+  onUserUpdate?: (user: AppUser) => void;
+  /** Called when the authentication token changes */
+  onTokenChange?: (token: string | undefined) => void;
+  /** Called when authentication state is initialized/restored */
+  onAuthStateChange?: (user: AppUser | undefined, token: string | undefined) => void;
 }

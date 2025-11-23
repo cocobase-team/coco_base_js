@@ -4,7 +4,18 @@
 
 Starting from version **1.3.1**, Cocobase has introduced a new authentication architecture with a dedicated `AuthHandler` class. This improves code organization, maintainability, and provides better TypeScript support.
 
-**Good news:** All existing code continues to work! The old authentication methods are deprecated but still functional.
+**Good news:** Most existing code continues to work! The old authentication methods are deprecated but still functional.
+
+## ⚠️ Breaking Change: Google OAuth
+
+> **IMPORTANT:** The Google OAuth implementation has changed in v1.3.1+. The old redirect-based flow (`loginWithGoogle()` returning a URL) is **no longer supported** and has been replaced with Google's ID token verification method.
+
+**What changed:**
+- ❌ **Removed:** `loginWithGoogle()` - redirect flow
+- ❌ **Removed:** `completeGoogleLogin(token)` - callback handler
+- ✅ **New:** `loginWithGoogle(idToken, platform)` - ID token verification
+
+**Migration required:** If you're using Google OAuth, you must update your implementation to use Google Identity Services. See [Example 6: Google OAuth](#example-6-google-oauth) below.
 
 ## What Changed?
 
@@ -228,7 +239,9 @@ await db.auth.updateUserWithFiles(
 
 ### Example 6: Google OAuth
 
-**Before:**
+> **⚠️ BREAKING CHANGE:** Google OAuth implementation has changed in v1.3.1+. The old redirect-based flow is replaced with Google's ID token verification.
+
+**Before (Old redirect flow - NO LONGER SUPPORTED):**
 ```typescript
 // Initiate Google login
 const { url } = await db.loginWithGoogle();
@@ -242,19 +255,31 @@ if (token) {
 }
 ```
 
-**After:**
+**After (New ID token flow):**
 ```typescript
-// Initiate Google login
-const { url } = await db.auth.loginWithGoogle();
-window.location.href = url;
+// Load Google Sign-In script
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 
-// After redirect
-const token = new URLSearchParams(window.location.search).get('token');
-if (token) {
-  await db.auth.completeGoogleLogin(token);
-  console.log('Logged in:', db.auth.getUser());
+// Initialize Google Sign-In
+google.accounts.id.initialize({
+  client_id: 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com',
+  callback: handleGoogleSignIn
+});
+
+// Render button
+google.accounts.id.renderButton(
+  document.getElementById('google-signin-button'),
+  { theme: 'outline', size: 'large' }
+);
+
+// Handle sign-in
+async function handleGoogleSignIn(response) {
+  const user = await db.auth.loginWithGoogle(response.credential, 'web');
+  console.log('Logged in:', user.email);
 }
 ```
+
+See the [Google OAuth Documentation](Authentication.md#google-oauth) for complete implementation examples.
 
 ### Example 7: Role-Based Access Control
 

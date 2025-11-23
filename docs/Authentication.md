@@ -7,6 +7,7 @@ Complete guide to using Cocobase authentication features.
 ## Table of Contents
 
 - [Getting Started](#getting-started)
+- [Authentication Callbacks](#authentication-callbacks)
 - [User Registration](#user-registration)
 - [User Login](#user-login)
 - [Session Management](#session-management)
@@ -36,6 +37,78 @@ const db = new Cocobase({
   projectId: 'your-project-id'   // From cocobase.buzz
 });
 ```
+
+## Authentication Callbacks
+
+**New Feature:** Cocobase now supports authentication callbacks, making it easy to integrate with any JavaScript framework (React, Vue, Svelte, Angular, etc.).
+
+### Quick Example
+
+```typescript
+// Register callbacks to handle auth state changes
+db.auth.onAuthEvent({
+  onLogin: (user, token) => {
+    // Update your app's state when user logs in
+    console.log('User logged in:', user.email);
+  },
+  onLogout: () => {
+    // Update your app's state when user logs out
+    console.log('User logged out');
+  },
+  onUserUpdate: (user) => {
+    // Update your app's state when user data changes
+    console.log('User updated:', user);
+  }
+});
+```
+
+### Framework Integration
+
+The callback system works seamlessly with popular frameworks:
+
+**React:**
+```typescript
+const [user, setUser] = useState(null);
+
+useEffect(() => {
+  db.auth.onAuthEvent({
+    onLogin: (user) => setUser(user),
+    onLogout: () => setUser(null)
+  });
+}, []);
+```
+
+**Vue:**
+```typescript
+const user = ref(null);
+
+db.auth.onAuthEvent({
+  onLogin: (newUser) => user.value = newUser,
+  onLogout: () => user.value = null
+});
+```
+
+**Svelte:**
+```typescript
+import { writable } from 'svelte/store';
+const user = writable(null);
+
+db.auth.onAuthEvent({
+  onLogin: (newUser) => user.set(newUser),
+  onLogout: () => user.set(null)
+});
+```
+
+### Available Callbacks
+
+- `onLogin` - Triggered when user logs in (email/password or OAuth)
+- `onRegister` - Triggered when new user registers
+- `onLogout` - Triggered when user logs out
+- `onUserUpdate` - Triggered when user data is updated
+- `onTokenChange` - Triggered when auth token changes
+- `onAuthStateChange` - Triggered when auth state is initialized
+
+📚 **See the complete [Authentication Callbacks Guide](./examples/AuthCallbacks.md)** for detailed examples with React, Vue, Svelte, Angular, and more.
 
 ## User Registration
 
@@ -257,65 +330,256 @@ await db.auth.updateUserWithFiles(
 
 ## Google OAuth
 
-### Initiate Google Login
+Cocobase supports Google Sign-In using Google's ID token verification. This provides a secure, token-based authentication flow.
 
-```typescript
-// Get Google OAuth URL
-const { url } = await db.auth.loginWithGoogle();
+### Prerequisites
 
-// Redirect user to Google login
-window.location.href = url;
+1. **Enable Google Sign-In** in your Cocobase project settings at [cocobase.buzz](https://cocobase.buzz)
+2. **Configure Google Client ID** in your project settings
+3. **Get your Google Client ID** from [Google Cloud Console](https://console.cloud.google.com/)
+
+### Web Implementation
+
+#### Step 1: Add Google Sign-In Script
+
+Add the Google Identity Services library to your HTML:
+
+```html
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 ```
 
-### Complete Google Login
-
-After Google redirects back to your app:
+#### Step 2: Initialize Google Sign-In
 
 ```typescript
-// Parse token from URL
-const params = new URLSearchParams(window.location.search);
-const token = params.get('token');
+import { Cocobase } from 'cocobase';
 
-if (token) {
-  await db.auth.completeGoogleLogin(token);
-  console.log('Logged in with Google:', db.auth.getUser());
+const db = new Cocobase({
+  apiKey: 'your-api-key',        // From cocobase.buzz
+  projectId: 'your-project-id'   // From cocobase.buzz
+});
 
-  // Redirect to dashboard
-  window.location.href = '/dashboard';
-}
-```
+// Initialize Google Sign-In
+google.accounts.id.initialize({
+  client_id: 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com',
+  callback: handleGoogleSignIn
+});
 
-### Full Google OAuth Flow Example
+// Render the Google Sign-In button
+google.accounts.id.renderButton(
+  document.getElementById('google-signin-button'),
+  { theme: 'outline', size: 'large' }
+);
 
-```typescript
-// Login page
-async function handleGoogleLogin() {
+// Handle Google Sign-In callback
+async function handleGoogleSignIn(response) {
   try {
-    const { url } = await db.auth.loginWithGoogle();
-    window.location.href = url;
-  } catch (error) {
-    console.error('Failed to initiate Google login:', error);
-  }
-}
-
-// OAuth callback page
-async function handleOAuthCallback() {
-  const token = new URLSearchParams(window.location.search).get('token');
-
-  if (!token) {
-    console.error('No token received');
-    window.location.href = '/login';
-    return;
-  }
-
-  try {
-    await db.auth.completeGoogleLogin(token);
-    console.log('Login successful!');
+    const user = await db.auth.loginWithGoogle(response.credential, 'web');
+    console.log('Logged in with Google:', user.email);
+    // Redirect to dashboard
     window.location.href = '/dashboard';
   } catch (error) {
-    console.error('Failed to complete Google login:', error);
-    window.location.href = '/login';
+    console.error('Google Sign-In failed:', error);
+    alert('Login failed. Please try again.');
   }
+}
+```
+
+#### Step 3: Add Button HTML
+
+```html
+<div id="google-signin-button"></div>
+```
+
+### React Implementation
+
+```typescript
+import { useEffect } from 'react';
+import { db } from './lib/cocobase';
+
+function LoginPage() {
+  useEffect(() => {
+    // Load Google Sign-In script
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
+
+    script.onload = () => {
+      window.google.accounts.id.initialize({
+        client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID!,
+        callback: handleGoogleSignIn,
+      });
+
+      window.google.accounts.id.renderButton(
+        document.getElementById('google-signin-button')!,
+        { theme: 'outline', size: 'large' }
+      );
+    };
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  async function handleGoogleSignIn(response: any) {
+    try {
+      const user = await db.auth.loginWithGoogle(response.credential, 'web');
+      console.log('Logged in:', user.email);
+      // Update app state, redirect, etc.
+    } catch (error) {
+      console.error('Login failed:', error);
+    }
+  }
+
+  return (
+    <div>
+      <h1>Login</h1>
+      <div id="google-signin-button"></div>
+    </div>
+  );
+}
+```
+
+### Vue Implementation
+
+```vue
+<template>
+  <div>
+    <h1>Login</h1>
+    <div id="google-signin-button"></div>
+  </div>
+</template>
+
+<script setup>
+import { onMounted } from 'vue';
+import { db } from '@/lib/cocobase';
+
+onMounted(() => {
+  // Load Google Sign-In script
+  const script = document.createElement('script');
+  script.src = 'https://accounts.google.com/gsi/client';
+  script.async = true;
+  script.defer = true;
+  document.body.appendChild(script);
+
+  script.onload = () => {
+    window.google.accounts.id.initialize({
+      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+      callback: handleGoogleSignIn,
+    });
+
+    window.google.accounts.id.renderButton(
+      document.getElementById('google-signin-button'),
+      { theme: 'outline', size: 'large' }
+    );
+  };
+});
+
+async function handleGoogleSignIn(response) {
+  try {
+    const user = await db.auth.loginWithGoogle(response.credential, 'web');
+    console.log('Logged in:', user.email);
+    // Navigate to dashboard
+  } catch (error) {
+    console.error('Login failed:', error);
+  }
+}
+</script>
+```
+
+### Mobile Implementation (React Native)
+
+For mobile apps, use the `@react-native-google-signin/google-signin` package:
+
+```typescript
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { db } from './lib/cocobase';
+
+// Configure Google Sign-In
+GoogleSignin.configure({
+  webClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+  iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com', // Optional
+});
+
+async function handleGoogleLogin() {
+  try {
+    // Sign in with Google
+    await GoogleSignin.hasPlayServices();
+    const userInfo = await GoogleSignin.signIn();
+
+    // Get the ID token
+    const { idToken } = await GoogleSignin.getTokens();
+
+    // Authenticate with Cocobase
+    const user = await db.auth.loginWithGoogle(idToken, 'mobile');
+    console.log('Logged in:', user.email);
+
+    // Navigate to home screen
+  } catch (error) {
+    console.error('Google Sign-In failed:', error);
+  }
+}
+```
+
+### Error Handling
+
+The Google Sign-In method can throw several errors:
+
+```typescript
+async function handleGoogleSignIn(credential: string) {
+  try {
+    const user = await db.auth.loginWithGoogle(credential, 'web');
+    console.log('Success:', user.email);
+  } catch (error) {
+    const errorMessage = error.message;
+
+    if (errorMessage.includes('Google Sign-In integration is not enabled')) {
+      console.error('Enable Google Sign-In in your Cocobase project settings');
+    } else if (errorMessage.includes('GOOGLE_CLIENT_ID is not configured')) {
+      console.error('Configure your Google Client ID in project settings');
+    } else if (errorMessage.includes('Invalid Google ID token')) {
+      console.error('The Google token is invalid or expired');
+    } else if (errorMessage.includes('already registered with password')) {
+      console.error('This email is already registered. Please use email/password login');
+    } else if (errorMessage.includes('already registered with Apple')) {
+      console.error('This email is already registered. Please use Apple Sign-In');
+    } else {
+      console.error('Login failed:', errorMessage);
+    }
+  }
+}
+```
+
+### One-Tap Sign-In (Optional)
+
+Enable Google One-Tap for a better user experience:
+
+```typescript
+// Display One-Tap prompt
+google.accounts.id.prompt((notification) => {
+  if (notification.isNotDisplayed()) {
+    console.log('One-Tap was not displayed');
+  } else if (notification.isSkippedMoment()) {
+    console.log('One-Tap was skipped');
+  }
+});
+```
+
+### Custom Button (Without Google UI)
+
+If you want a custom button instead of Google's default:
+
+```html
+<button onclick="handleCustomGoogleLogin()">
+  Sign in with Google
+</button>
+```
+
+```typescript
+async function handleCustomGoogleLogin() {
+  // Request ID token using Google's programmatic flow
+  google.accounts.id.prompt();
 }
 ```
 

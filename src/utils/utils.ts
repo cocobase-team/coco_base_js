@@ -250,6 +250,58 @@ function buildFilterQuery({
   return params.toString();
 }
 
+const parseErrorMessage = (msg: string) => {
+  // Try to handle messages that were created by the request helper.
+  // Expect patterns like:
+  // - "Request failed:\n{...json...}"
+  // - "{...json...}"
+  // - plain string error messages
+  try {
+    // Trim surrounding whitespace
+    const trimmed = String(msg).trim();
+
+    // If it starts with the 'Request failed:' prefix, strip it first
+    const prefix = "Request failed:";
+    let candidate = trimmed;
+    if (trimmed.startsWith(prefix)) {
+      candidate = trimmed.substring(prefix.length).trim();
+    }
+
+    // If candidate looks like JSON, parse it
+    if (
+      (candidate.startsWith("{") && candidate.endsWith("}")) ||
+      (candidate.startsWith("[") && candidate.endsWith("]"))
+    ) {
+      try {
+        const parsed = JSON.parse(candidate);
+        return parsed;
+      } catch (e) {
+        // Fallthrough to return as text
+      }
+    }
+
+    // If it's not JSON, attempt to parse lines that contain a JSON payload after a newline
+    const newlineIndex = candidate.indexOf("\n");
+    if (newlineIndex !== -1) {
+      const after = candidate.substring(newlineIndex + 1).trim();
+      if (
+        (after.startsWith("{") && after.endsWith("}")) ||
+        (after.startsWith("[") && after.endsWith("]"))
+      ) {
+        try {
+          return JSON.parse(after);
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+
+    // Nothing structured found; return an object with the message preserved
+    return { message: String(msg) };
+  } catch (err) {
+    return { message: String(msg) };
+  }
+};
 const BASEURL = "https://api.cocobase.buzz";
 export {
   getFromLocalStorage,
@@ -258,4 +310,5 @@ export {
   BASEURL,
   buildFilterQuery,
   parseFilterKey,
+  parseErrorMessage,
 };
