@@ -386,6 +386,56 @@ export class AuthHandler {
   }
 
   /**
+   * Authenticates a user using GitHub OAuth with access token.
+   *
+   * This method verifies the GitHub access token and either creates a new user
+   * or logs in an existing user who registered with GitHub OAuth.
+   *
+   * @param accessToken - GitHub access token obtained from GitHub OAuth flow
+   * @param platform - Optional platform identifier ('web', 'mobile', 'ios', 'android')
+   * @returns Promise resolving to the authenticated user object
+   *
+   * @throws {Error} If GitHub Sign-In is not enabled in project settings
+   * @throws {Error} If the GitHub access token is invalid or expired
+   * @throws {Error} If email is already registered with password authentication
+   * @throws {Error} If email is already registered with other OAuth providers
+   *
+   * @example
+   * ```typescript
+   * // Web - After GitHub OAuth flow
+   * const accessToken = 'gho_xxxxxxxxxxxx'; // from OAuth callback
+   * const user = await db.auth.loginWithGithub(accessToken, 'web');
+   * console.log('Logged in:', user.email);
+   *
+   * // Mobile - After getting access token from GitHub OAuth SDK
+   * const user = await db.auth.loginWithGithub(accessToken, 'mobile');
+   * ```
+   */
+  async loginWithGithub(
+    accessToken: string,
+    platform?: "web" | "mobile" | "ios" | "android"
+  ): Promise<AppUser> {
+    const response = await this.request<{
+      access_token: string;
+      user: AppUser;
+    }>(
+      "POST",
+      "/auth-collections/github-verify",
+      { access_token: accessToken, platform },
+      false
+    );
+
+    this.token = response.access_token;
+    this.setToken(response.access_token);
+    this.setUser(response.user);
+
+    // Trigger login callback
+    this.callbacks.onLogin?.(response.user, response.access_token);
+
+    return response.user;
+  }
+
+  /**
    * Register a new user with file uploads (avatar, cover photo, etc.)
    *
    * @param email - User email

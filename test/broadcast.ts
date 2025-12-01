@@ -2,8 +2,7 @@ import { Cocobase } from "../src/index.js";
 
 // Broadcast test using same project API key/projectId as test/app.ts
 const db = new Cocobase({
-  apiKey: "yR6U1bHsXW7vdYBHDo_rnqOKnvtKkC0HCqc_oucz",
-  projectId: "fc7fee75-6619-48e1-acbf-4f7917db2c42",
+ 
 });
 
 async function run() {

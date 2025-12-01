@@ -701,17 +701,7 @@ export class Cocobase {
     return this.auth.updateUserWithFiles(data, email, password, files);
   }
 
-  watchCollection(
-    collection: string,
-    callback: (event: { event: string; data: Document<any> }) => void,
-    connectionName?: string,
-    onOpen: () => void = () => {},
-    onError: () => void = () => {}
-  ): void {
-    throw new Error(
-      "watchCollection is deprecated; use the Realtime helpers in src/realtime/websockets.ts instead"
-    );
-  }
+
   /**
    * Checks if the current user has a specific role.
    *
