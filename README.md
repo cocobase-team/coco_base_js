@@ -225,17 +225,6 @@ await db.createDocument("events", {
 });
 ```
 
-## 🆚 How We Compare
-
-| Feature                  | Cocobase       | Firebase    | Supabase   | Custom Backend   |
-| ------------------------ | -------------- | ----------- | ---------- | ---------------- |
-| **Setup Time**           | 2 minutes      | 15 minutes  | 30 minutes | Weeks/Months     |
-| **TypeScript Support**   | ✅ Native      | ⚠️ Limited  | ✅ Good    | 🛠️ DIY           |
-| **Learning Curve**       | 📈 Minimal     | 📈 Moderate | 📈 Steep   | 📈 Very Steep    |
-| **Authentication**       | ✅ Built-in    | ✅ Complex  | ✅ Good    | 🛠️ Build it      |
-| **Developer Experience** | 🔥 Excellent   | ⚠️ Mixed    | ✅ Good    | 🛠️ Varies        |
-| **Pricing**              | 💰 Transparent | 💰 Complex  | 💰 Fair    | 💰 Unpredictable |
-
 ## 🎨 Framework Integration
 
 Cocobase works beautifully with all modern frameworks:
