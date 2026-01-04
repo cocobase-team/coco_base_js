@@ -19,6 +19,7 @@ const db = new Cocobase({
 await db.createDocument("users", { name: "John" });
 ```
 
+
 ### 🛡️ **Authentication Made Simple**
 
 Built-in user management that actually works. Registration, login, sessions, and user profiles - all handled seamlessly.
