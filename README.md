@@ -25,6 +25,7 @@ await db.createDocument("users", { name: "John" });
 Built-in user management that actually works. Registration, login, sessions, and user profiles - all handled seamlessly.
 
 ```typescript
+
 // User registration + automatic login in one line
 await db.auth.register("user@example.com", "password", { role: "admin" });
 ```
