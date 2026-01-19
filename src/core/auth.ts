@@ -6,6 +6,9 @@ import {
   Query,
   GoogleLoginResponse,
   AuthCallbacks,
+  Response,
+  LoginResult,
+  TwoFAVerifyResponse,
 } from "../types/types.js";
 import {
   buildFilterQuery,
@@ -158,10 +161,8 @@ export class AuthHandler {
   ): Promise<T> {
     const url = `${this.baseURL}${path}`;
     const data = useDataKey ? { data: body } : body;
-    console.log("request made")
     try {
       const res = await fetch(url, {
-        
         method,
         headers: {
           "Content-Type": "application/json",
@@ -265,22 +266,40 @@ export class AuthHandler {
    *
    * @param email - User's email address
    * @param password - User's password
-   * @returns Promise that resolves when login is complete
+   * @returns Promise resolving to LoginResult indicating success or 2FA requirement
    *
    * @example
    * ```typescript
-   * await db.auth.login('user@example.com', 'password123');
-   * console.log('Logged in as:', db.auth.getUser()?.email);
+   * const result = await db.auth.login('user@example.com', 'password123');
+   *
+   * if (result.requires_2fa) {
+   *   // Show 2FA input form to user
+   *   console.log(result.message); // "2FA code sent to your email"
+   *   // Later, call verify2FALogin with the code
+   * } else {
+   *   // Login successful
+   *   console.log('Logged in as:', result.user?.email);
+   * }
    * ```
    */
-  async login(email: string, password: string) {
+  async login(email: string, password: string): Promise<LoginResult> {
     const response = await this.request<TokenResponse>(
       "POST",
       `/auth-collections/login`,
       { email, password },
       false // Do not use data key for auth endpoints
     );
-    this.token = response.access_token;
+
+    // Check if 2FA is required
+    if (response.requires_2fa) {
+      return {
+        requires_2fa: true,
+        message: response.message,
+      };
+    }
+
+    // Normal login flow
+    this.token = response.access_token!;
     this.setToken(this.token);
     if (!response.user) {
       await this.getCurrentUser();
@@ -292,6 +311,11 @@ export class AuthHandler {
     if (this.user) {
       this.callbacks.onLogin?.(this.user, this.token);
     }
+
+    return {
+      requires_2fa: false,
+      user: this.user,
+    };
   }
 
   /**
@@ -300,35 +324,55 @@ export class AuthHandler {
    * @param email - User's email address
    * @param password - User's password
    * @param data - Optional additional user data
-   * @returns Promise that resolves when registration is complete
+   * @returns Promise resolving to LoginResult (registration may require 2FA if enabled)
    *
    * @example
    * ```typescript
-   * await db.auth.register('user@example.com', 'password123', {
+   * const result = await db.auth.register('user@example.com', 'password123', {
    *   username: 'johndoe',
    *   fullName: 'John Doe'
    * });
+   *
+   * if (result.requires_2fa) {
+   *   // Handle 2FA verification
+   * } else {
+   *   console.log('Registered as:', result.user?.email);
+   * }
    * ```
    */
-  async register(email: string, password: string, data?: Record<string, any>) {
+  async register(email: string, password: string, data?: Record<string, any>): Promise<LoginResult> {
     const response = await this.request<TokenResponse>(
       "POST",
       `/auth-collections/signup`,
       { email, password, data },
       false // Do not use data key for auth endpoints
     );
-    this.token = response.access_token;
+
+    // Check if 2FA is required
+    if (response.requires_2fa) {
+      return {
+        requires_2fa: true,
+        message: response.message,
+      };
+    }
+
+    this.token = response.access_token!;
     this.setToken(this.token);
     if (!response.user) {
       await this.getCurrentUser();
-    }else{
-      this.setUser(response.user)
+    } else {
+      this.setUser(response.user);
     }
 
     // Trigger register callback
     if (this.user) {
       this.callbacks.onRegister?.(this.user, this.token);
     }
+
+    return {
+      requires_2fa: false,
+      user: this.user,
+    };
   }
 
   /**
@@ -386,33 +430,45 @@ export class AuthHandler {
   }
 
   /**
-   * Authenticates a user using GitHub OAuth with access token.
+   * Authenticates a user using GitHub OAuth with authorization code.
    *
-   * This method verifies the GitHub access token and either creates a new user
-   * or logs in an existing user who registered with GitHub OAuth.
+   * This method exchanges the GitHub authorization code for a user session.
+   * It creates a new user or logs in an existing user who registered with GitHub OAuth.
    *
-   * @param accessToken - GitHub access token obtained from GitHub OAuth flow
+   * @param code - GitHub authorization code from OAuth callback
+   * @param redirectUri - The redirect URI used in the OAuth flow (must match the one registered)
    * @param platform - Optional platform identifier ('web', 'mobile', 'ios', 'android')
    * @returns Promise resolving to the authenticated user object
    *
    * @throws {Error} If GitHub Sign-In is not enabled in project settings
-   * @throws {Error} If the GitHub access token is invalid or expired
+   * @throws {Error} If the GitHub authorization code is invalid or expired
    * @throws {Error} If email is already registered with password authentication
    * @throws {Error} If email is already registered with other OAuth providers
    *
    * @example
    * ```typescript
-   * // Web - After GitHub OAuth flow
-   * const accessToken = 'gho_xxxxxxxxxxxx'; // from OAuth callback
-   * const user = await db.auth.loginWithGithub(accessToken, 'web');
-   * console.log('Logged in:', user.email);
+   * // Web - After GitHub OAuth callback
+   * // 1. Redirect user to GitHub OAuth
+   * const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}`;
+   * window.location.href = githubAuthUrl;
    *
-   * // Mobile - After getting access token from GitHub OAuth SDK
-   * const user = await db.auth.loginWithGithub(accessToken, 'mobile');
+   * // 2. Handle the callback with the code
+   * const urlParams = new URLSearchParams(window.location.search);
+   * const code = urlParams.get('code');
+   *
+   * if (code) {
+   *   const user = await db.auth.loginWithGithub(
+   *     code,
+   *     'http://localhost:3000/auth/github/callback',
+   *     'web'
+   *   );
+   *   console.log('Logged in:', user.email);
+   * }
    * ```
    */
   async loginWithGithub(
-    accessToken: string,
+    code: string,
+    redirectUri: string,
     platform?: "web" | "mobile" | "ios" | "android"
   ): Promise<AppUser> {
     const response = await this.request<{
@@ -421,7 +477,7 @@ export class AuthHandler {
     }>(
       "POST",
       "/auth-collections/github-verify",
-      { access_token: accessToken, platform },
+      { code, redirect_uri: redirectUri, platform },
       false
     );
 
@@ -467,7 +523,7 @@ export class AuthHandler {
     password: string,
     data?: Record<string, any>,
     files?: Record<string, File | File[]>
-  ): Promise<AppUser> {
+  ): Promise<LoginResult> {
     const formData = new FormData();
 
     // Add JSON data
@@ -500,15 +556,27 @@ export class AuthHandler {
       throw new Error(`Registration failed: ${errorText}`);
     }
 
-    const response = (await res.json()) as TokenResponse & { user: AppUser };
-    this.token = response.access_token;
-    this.setToken(response.access_token);
-    this.setUser(response.user);
+    const response = (await res.json()) as TokenResponse;
+
+    // Check if 2FA is required
+    if (response.requires_2fa) {
+      return {
+        requires_2fa: true,
+        message: response.message,
+      };
+    }
+
+    this.token = response.access_token!;
+    this.setToken(response.access_token!);
+    this.setUser(response.user!);
 
     // Trigger register callback
-    this.callbacks.onRegister?.(response.user, response.access_token);
+    this.callbacks.onRegister?.(response.user!, response.access_token!);
 
-    return response.user;
+    return {
+      requires_2fa: false,
+      user: response.user,
+    };
   }
 
   /**
@@ -771,6 +839,168 @@ export class AuthHandler {
    */
   getUserById<T = any>(userId: string): Promise<AppUser> {
     return this.request<AppUser>("GET", `/auth-collections/users/${userId}`);
+  }
+
+  // ADDITIONAL SECURITY METHODS
+
+  /**
+   * Enables Two-Factor Authentication (2FA) for the current user.
+   *
+   * @returns Promise that resolves when 2FA is enabled
+   *
+   * @example
+   * ```typescript
+   * await db.auth.enable2FA();
+   * console.log('2FA enabled for user');
+   * ```
+   */
+  enable2FA(): Promise<void> {
+    return this.request<void>(
+      "POST",
+      `/auth-collections/2fa/enable`,
+      {},
+      false
+    );
+  }
+
+  /**
+   * Disables Two-Factor Authentication (2FA) for the current user.
+   *
+   * @returns Promise that resolves when 2FA is disabled
+   *
+   * @example
+   * ```typescript
+   * await db.auth.disable2FA();
+   * console.log('2FA disabled for user');
+   * ```
+   */
+  disable2FA(): Promise<void> {
+    return this.request<void>(
+      "POST",
+      `/auth-collections/2fa/disable`,
+      {},
+      false
+    );
+  }
+
+  /**
+   * Sends a Two-Factor Authentication (2FA) code to the user's registered method (e.g., email, SMS).
+   *
+   * @returns Promise that resolves when the 2FA code is sent
+   *
+   * @example
+   * ```typescript
+   * await db.auth.send2FACode();
+   * console.log('2FA code sent to user');
+   * ```
+   */
+  send2FACode(email:string): Promise<void> {
+    return this.request<void>(
+      "POST",
+      `/auth-collections/2fa/send-code`,
+      {
+        email
+      },
+      false
+    );
+  }
+
+  /**
+   * Completes login after 2FA verification.
+   * Call this after login() returns requires_2fa: true and the user provides the 2FA code.
+   *
+   * @param email - User's email address (same as used in login)
+   * @param code - The 2FA code from email/authenticator
+   * @returns Promise resolving to the authenticated user
+   *
+   * @example
+   * ```typescript
+   * // First, attempt login
+   * const result = await db.auth.login('user@example.com', 'password123');
+   *
+   * if (result.requires_2fa) {
+   *   // User enters the 2FA code they received
+   *   const user = await db.auth.verify2FALogin('user@example.com', '123456');
+   *   console.log('Logged in as:', user.email);
+   * }
+   * ```
+   */
+  async verify2FALogin(email: string, code: string): Promise<AppUser> {
+    const response = await this.request<TwoFAVerifyResponse>(
+      "POST",
+      `/auth-collections/2fa/verify`,
+      { email, code },
+      false
+    );
+
+    this.token = response.access_token;
+    this.setToken(this.token);
+    this.setUser(response.user);
+
+    // Trigger login callback
+    this.callbacks.onLogin?.(response.user, response.access_token);
+
+    return response.user;
+  }
+
+  /**
+   * Requests an email verification to be sent to the user's email address.
+   *
+   * @returns Promise that resolves when the verification email is requested
+   *
+   * @example
+   * ```typescript
+   * await db.auth.requestEmailVerification();
+   * console.log('Verification email requested');
+   * ```
+   */
+  requestEmailVerification(): Promise<Response> {
+    return this.request<Response>(
+      "POST",
+      `/auth-collections/verify-email/send`,
+      {},
+      false
+    );
+  }
+
+  /**
+   * Verifies the user's email using the provided token.
+   *
+   * @param token - Verification token
+   * @returns Promise that resolves when the email is verified
+   *
+   * @example
+   * ```typescript
+   * await db.auth.verifyEmail('verification-token');
+   * console.log('Email verified');
+   * ```
+   */
+  verifyEmail(token: string): Promise<Response> {
+    return this.request<Response>(
+      "POST",
+      `/auth-collections/verify-email/verify`,
+      { token },
+      false
+    );
+  }
+
+  /**   * Resends the email verification to the user's email address.
+   *
+   * @returns Promise that resolves when the verification email is resent
+   *
+   * @example
+   * ```typescript
+   * await db.auth.resendVerificationEmail();
+   * console.log('Verification email resent');
+   * ```
+   */
+  resendVerificationEmail(): Promise<void> {
+    return this.request<void>(
+      "POST",
+      `/auth-collections/verify-email/resend`,
+      {},
+      false
+    );
   }
 }
 

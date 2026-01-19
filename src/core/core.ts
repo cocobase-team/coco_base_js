@@ -8,6 +8,7 @@ import {
   GoogleLoginResponse,
   AggregateResults,
   AggregateParams,
+  LoginResult,
 } from "../types/types.js";
 import {
   BASEURL,
@@ -24,6 +25,7 @@ import {
   RoomChat,
   listRooms,
 } from "../realtime/websockets.js";
+import { GameClient, listGameRooms, RoomListResponse } from "../realtime/multiplayer.js";
 
 /**
  * Main Cocobase client for interacting with the Cocobase backend API.
@@ -63,7 +65,7 @@ export class Cocobase {
   functions: CloudFunction;
   auth: AuthHandler;
   /**
-   * Realtime helper factories. Use `db.realtime.collection(...)`, `db.realtime.broadcast(...)`, `db.realtime.room(...)`, or `db.realtime.listRooms()`.
+   * Realtime helper factories. Use `db.realtime.collection(...)`, `db.realtime.broadcast(...)`, `db.realtime.room(...)`, `db.realtime.game(...)`, or `db.realtime.listRooms()`.
    */
   realtime: {
     collection: (
@@ -73,6 +75,48 @@ export class Cocobase {
     broadcast: (userId?: string, userName?: string) => ProjectBroadcast;
     room: (roomId: string, userId?: string, userName?: string) => RoomChat;
     listRooms: () => Promise<any>;
+    /**
+     * Create a multiplayer game client for WebSocket-based games.
+     *
+     * @param functionName - Name of the WebSocket cloud function
+     * @returns GameClient instance
+     *
+     * @example
+     * ```typescript
+     * const game = db.realtime.game('my-game');
+     *
+     * game.on('connected', (data) => {
+     *   console.log('Connected! Player ID:', data.your_id);
+     * });
+     *
+     * game.on('player_joined', (data) => {
+     *   console.log('Player joined:', data.player_id);
+     * });
+     *
+     * game.on('state', (data) => {
+     *   renderPlayers(data.players);
+     * });
+     *
+     * await game.connect({ roomId: 'game-room-1' });
+     * game.send({ action: 'move', x: 100, y: 200 });
+     * ```
+     */
+    game: (functionName: string) => GameClient;
+    /**
+     * List available game rooms for discovery.
+     *
+     * @param publicOnly - Only list public rooms (default: true)
+     * @returns Promise resolving to room list
+     *
+     * @example
+     * ```typescript
+     * const { rooms, total } = await db.realtime.listGameRooms();
+     * rooms.forEach(room => {
+     *   console.log(`${room.room_id}: ${room.player_count} players`);
+     * });
+     * ```
+     */
+    listGameRooms: (publicOnly?: boolean) => Promise<RoomListResponse>;
   };
   /**
    * Creates a new Cocobase client instance.
@@ -108,6 +152,14 @@ export class Cocobase {
       room: (roomId: string, userId?: string, userName?: string) =>
         new RoomChat(roomId, this.apiKey || "", userId, userName),
       listRooms: async () => listRooms(this.apiKey || ""),
+      game: (functionName: string) =>
+        new GameClient(
+          this.projectId || "",
+          functionName,
+          this.auth.getToken()
+        ),
+      listGameRooms: (publicOnly = true) =>
+        listGameRooms(this.projectId || "", this.apiKey, publicOnly),
     };
   }
 
@@ -605,7 +657,7 @@ export class Cocobase {
     password: string,
     data?: Record<string, any>,
     files?: Record<string, File | File[]>
-  ): Promise<AppUser> {
+  ): Promise<LoginResult> {
     return this.auth.registerWithFiles(email, password, data, files);
   }
 

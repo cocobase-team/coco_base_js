@@ -10,6 +10,11 @@ export interface CocobaseConfig {
   projectId?: string;
 }
 
+
+
+export interface Response{
+  message:string
+}
 /**
  * Represents a collection in the database.
  */
@@ -97,9 +102,38 @@ export interface Query {
  * Response from authentication operations containing the access token.
  */
 export interface TokenResponse {
-  /** JWT access token for authenticated requests */
+  /** JWT access token for authenticated requests (undefined if 2FA required) */
+  access_token?: string;
+  /** User object (undefined if 2FA required) */
+  user?: AppUser;
+  /** Whether 2FA verification is required to complete login */
+  requires_2fa?: boolean;
+  /** Message from the server (e.g., "2FA code sent to your email") */
+  message?: string;
+}
+
+/**
+ * Response from 2FA verification endpoint.
+ */
+export interface TwoFAVerifyResponse {
+  /** JWT access token after successful 2FA verification */
   access_token: string;
-  user:AppUser;
+  /** User object */
+  user: AppUser;
+  /** Success message */
+  message: string;
+}
+
+/**
+ * Login result that clearly indicates whether 2FA is required.
+ */
+export interface LoginResult {
+  /** Whether 2FA verification is required */
+  requires_2fa: boolean;
+  /** User object (only present if login succeeded without 2FA) */
+  user?: AppUser;
+  /** Message from server (present when 2FA is required) */
+  message?: string;
 }
 
 /**
