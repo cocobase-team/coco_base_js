@@ -1,5 +1,4 @@
-import { BASEURL } from "../utils/utils.js";
-
+const BASEURL =  'https://cloud.cocobase.buzz'
 /**
  * Player information in a game room
  */

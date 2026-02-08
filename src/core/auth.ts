@@ -17,6 +17,16 @@ import {
   setToLocalStorage,
 } from "../utils/utils.js";
 
+import {
+  RegisterParams,
+  RegisterWithFilesParams,
+  LoginParams,
+  UpdateUserParams,
+  UpdateUserWithFilesParams,
+  GoogleLoginParams,
+  GithubLoginParams,
+  Verify2FAParams,
+} from "../types/params.js";
 /**
  * Authentication handler for Cocobase client.
  *
@@ -33,7 +43,7 @@ export class AuthHandler {
   private baseURL: string;
   private apiKey?: string;
   private token?: string;
-  private user?: AppUser;
+   user?: AppUser;
   private callbacks: AuthCallbacks = {};
 
   /**
@@ -264,13 +274,15 @@ export class AuthHandler {
   /**
    * Authenticates a user with email and password.
    *
-   * @param email - User's email address
-   * @param password - User's password
+   * @param params - Login parameters
    * @returns Promise resolving to LoginResult indicating success or 2FA requirement
    *
    * @example
    * ```typescript
-   * const result = await db.auth.login('user@example.com', 'password123');
+   * const result = await db.auth.login({
+   *   email: 'user@example.com',
+   *   password: 'password123'
+   * });
    *
    * if (result.requires_2fa) {
    *   // Show 2FA input form to user
@@ -282,7 +294,8 @@ export class AuthHandler {
    * }
    * ```
    */
-  async login(email: string, password: string): Promise<LoginResult> {
+  async login(params: LoginParams): Promise<LoginResult> {
+    const { email, password } = params;
     const response = await this.request<TokenResponse>(
       "POST",
       `/auth-collections/login`,
@@ -321,16 +334,16 @@ export class AuthHandler {
   /**
    * Registers a new user with email, password, and optional additional data.
    *
-   * @param email - User's email address
-   * @param password - User's password
-   * @param data - Optional additional user data
+   * @param params - Registration parameters
    * @returns Promise resolving to LoginResult (registration may require 2FA if enabled)
    *
    * @example
    * ```typescript
-   * const result = await db.auth.register('user@example.com', 'password123', {
-   *   username: 'johndoe',
-   *   fullName: 'John Doe'
+   * const result = await db.auth.register({
+   *   email: 'user@example.com',
+   *   password: 'password123',
+   *   data: { username: 'johndoe', fullName: 'John Doe' },
+   *   roles: ['user'] // optional, if allowed by project config
    * });
    *
    * if (result.requires_2fa) {
@@ -340,11 +353,12 @@ export class AuthHandler {
    * }
    * ```
    */
-  async register(email: string, password: string, data?: Record<string, any>): Promise<LoginResult> {
+  async register(params: RegisterParams): Promise<LoginResult> {
+    const { email, password, data, roles,phone_number } = params;
     const response = await this.request<TokenResponse>(
       "POST",
       `/auth-collections/signup`,
-      { email, password, data },
+      { email, password, data, roles ,phone_number},
       false // Do not use data key for auth endpoints
     );
 
@@ -402,13 +416,11 @@ export class AuthHandler {
    * });
    *
    * // Mobile - After getting ID token from Google Sign-In SDK
-   * const user = await db.auth.loginWithGoogle(idToken, 'mobile');
+   * const user = await db.auth.loginWithGoogle({ idToken, platform: 'mobile' });
    * ```
    */
-  async loginWithGoogle(
-    idToken: string,
-    platform?: "web" | "mobile" | "ios" | "android"
-  ): Promise<AppUser> {
+  async loginWithGoogle(params: GoogleLoginParams): Promise<AppUser> {
+    const { idToken, platform } = params;
     const response = await this.request<{
       access_token: string;
       user: AppUser;
@@ -466,11 +478,8 @@ export class AuthHandler {
    * }
    * ```
    */
-  async loginWithGithub(
-    code: string,
-    redirectUri: string,
-    platform?: "web" | "mobile" | "ios" | "android"
-  ): Promise<AppUser> {
+  async loginWithGithub(params: GithubLoginParams): Promise<AppUser> {
+    const { code, redirectUri, platform } = params;
     const response = await this.request<{
       access_token: string;
       user: AppUser;
@@ -494,40 +503,33 @@ export class AuthHandler {
   /**
    * Register a new user with file uploads (avatar, cover photo, etc.)
    *
-   * @param email - User email
-   * @param password - User password
-   * @param data - Additional user data (optional)
-   * @param files - Object mapping field names to File objects (optional)
+   * @param params - Registration parameters with files
    *
    * @example
    * ```typescript
    * // Register with avatar
-   * await db.auth.registerWithFiles(
-   *   'john@example.com',
-   *   'password123',
-   *   { username: 'johndoe', full_name: 'John Doe' },
-   *   { avatar: avatarFile }
-   * );
+   * await db.auth.registerWithFiles({
+   *   email: 'john@example.com',
+   *   password: 'password123',
+   *   data: { username: 'johndoe', full_name: 'John Doe' },
+   *   files: { avatar: avatarFile }
+   * });
    *
    * // Register with avatar and cover photo
-   * await db.auth.registerWithFiles(
-   *   'john@example.com',
-   *   'password123',
-   *   { username: 'johndoe' },
-   *   { avatar: avatarFile, cover_photo: coverFile }
-   * );
+   * await db.auth.registerWithFiles({
+   *   email: 'john@example.com',
+   *   password: 'password123',
+   *   data: { username: 'johndoe' },
+   *   files: { avatar: avatarFile, cover_photo: coverFile }
+   * });
    * ```
    */
-  async registerWithFiles(
-    email: string,
-    password: string,
-    data?: Record<string, any>,
-    files?: Record<string, File | File[]>
-  ): Promise<LoginResult> {
+  async registerWithFiles(params: RegisterWithFilesParams): Promise<LoginResult> {
+    const { email, password, data, roles, files } = params;
     const formData = new FormData();
 
     // Add JSON data
-    formData.append("data", JSON.stringify({ email, password, data }));
+    formData.append("data", JSON.stringify({ email, password, data, roles }));
 
     // Add files with their field names if provided
     if (files) {
@@ -646,24 +648,24 @@ export class AuthHandler {
   /**
    * Updates the current user's profile data.
    *
-   * @param data - User data to update (optional)
-   * @param email - New email address (optional)
-   * @param password - New password (optional)
+   * @param params - Update parameters
    * @returns Promise resolving to the updated user object
    *
    * @example
    * ```typescript
    * await db.auth.updateUser({
-   *   bio: 'Updated bio',
-   *   website: 'https://example.com'
+   *   data: { bio: 'Updated bio', website: 'https://example.com' }
    * });
+   *
+   * // Update email
+   * await db.auth.updateUser({ email: 'newemail@example.com' });
+   *
+   * // Update password
+   * await db.auth.updateUser({ password: 'newpassword123' });
    * ```
    */
-  async updateUser(
-    data?: Record<string, any> | null,
-    email?: string | null,
-    password?: string | null
-  ): Promise<AppUser> {
+  async updateUser(params: UpdateUserParams): Promise<AppUser> {
+    const { data, email, password } = params;
     if (!this.token) {
       throw new Error("User is not authenticated");
     }
@@ -693,41 +695,31 @@ export class AuthHandler {
   /**
    * Update current user with file uploads
    *
-   * @param data - User data to update (optional)
-   * @param email - New email (optional)
-   * @param password - New password (optional)
-   * @param files - Object mapping field names to File objects (optional)
+   * @param params - Update parameters with files
    *
    * @example
    * ```typescript
    * // Update only avatar
-   * await db.auth.updateUserWithFiles(
-   *   undefined, undefined, undefined,
-   *   { avatar: newAvatarFile }
-   * );
+   * await db.auth.updateUserWithFiles({
+   *   files: { avatar: newAvatarFile }
+   * });
    *
    * // Update bio and avatar
-   * await db.auth.updateUserWithFiles(
-   *   { bio: 'Updated bio' },
-   *   undefined, undefined,
-   *   { avatar: newAvatarFile }
-   * );
+   * await db.auth.updateUserWithFiles({
+   *   data: { bio: 'Updated bio' },
+   *   files: { avatar: newAvatarFile }
+   * });
    *
    * // Update multiple fields and files
-   * await db.auth.updateUserWithFiles(
-   *   { username: 'newusername', bio: 'New bio' },
-   *   'newemail@example.com',
-   *   undefined,
-   *   { avatar: newAvatar, cover_photo: newCover }
-   * );
+   * await db.auth.updateUserWithFiles({
+   *   data: { username: 'newusername', bio: 'New bio' },
+   *   email: 'newemail@example.com',
+   *   files: { avatar: newAvatar, cover_photo: newCover }
+   * });
    * ```
    */
-  async updateUserWithFiles(
-    data?: Record<string, any> | null,
-    email?: string | null,
-    password?: string | null,
-    files?: Record<string, File | File[]>
-  ): Promise<AppUser> {
+  async updateUserWithFiles(params: UpdateUserWithFilesParams): Promise<AppUser> {
+    const { data, email, password, files } = params;
     if (!this.token) {
       throw new Error("User is not authenticated");
     }
@@ -909,23 +901,23 @@ export class AuthHandler {
    * Completes login after 2FA verification.
    * Call this after login() returns requires_2fa: true and the user provides the 2FA code.
    *
-   * @param email - User's email address (same as used in login)
-   * @param code - The 2FA code from email/authenticator
+   * @param params - 2FA verification parameters
    * @returns Promise resolving to the authenticated user
    *
    * @example
    * ```typescript
    * // First, attempt login
-   * const result = await db.auth.login('user@example.com', 'password123');
+   * const result = await db.auth.login({ email: 'user@example.com', password: 'password123' });
    *
    * if (result.requires_2fa) {
    *   // User enters the 2FA code they received
-   *   const user = await db.auth.verify2FALogin('user@example.com', '123456');
+   *   const user = await db.auth.verify2FALogin({ email: 'user@example.com', code: '123456' });
    *   console.log('Logged in as:', user.email);
    * }
    * ```
    */
-  async verify2FALogin(email: string, code: string): Promise<AppUser> {
+  async verify2FALogin(params: Verify2FAParams): Promise<AppUser> {
+    const { email, code } = params;
     const response = await this.request<TwoFAVerifyResponse>(
       "POST",
       `/auth-collections/2fa/verify`,

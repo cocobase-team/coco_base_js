@@ -11,6 +11,12 @@ import {
   LoginResult,
 } from "../types/types.js";
 import {
+  LoginParams,
+  RegisterParams,
+  RegisterWithFilesParams,
+  GoogleLoginParams,
+} from "../types/params.js";
+import {
   BASEURL,
   buildFilterQuery,
   getFromLocalStorage,
@@ -163,35 +169,6 @@ export class Cocobase {
     };
   }
 
-  /**
-   * Gets the current authentication token.
-   *
-   * @deprecated Use `db.auth.getToken()` instead. This method will be removed in a future version.
-   * @returns The current JWT token, or undefined if not authenticated
-   */
-  getToken(): string | undefined {
-    return this.auth.getToken();
-  }
-
-  /**
-   * Gets the current user object.
-   *
-   * @deprecated Use `db.auth.getUser()` instead. This property will be removed in a future version.
-   * @returns The current user object, or undefined if not authenticated
-   */
-  get user(): AppUser | undefined {
-    return this.auth.getUser();
-  }
-
-  /**
-   * Sets the authentication token and stores it in local storage.
-   *
-   * @deprecated Use `db.auth.setToken()` instead. This method will be removed in a future version.
-   * @param token - JWT authentication token
-   */
-  setToken(token: string) {
-    this.auth.setToken(token);
-  }
 
   private async request<T>(
     method: "GET" | "POST" | "PATCH" | "DELETE",
@@ -565,100 +542,86 @@ export class Cocobase {
    * Authenticates a user with email and password.
    *
    * @deprecated Use `db.auth.login()` instead. This method will be removed in a future version.
-   * @param email - User's email address
-   * @param password - User's password
+   * @param params - Login parameters
    * @returns Promise that resolves when login is complete
    *
    * @example
    * ```typescript
-   * await db.login('user@example.com', 'password123');
+   * await db.login({ email: 'user@example.com', password: 'password123' });
    * console.log('Logged in as:', db.user.email);
    * ```
    */
-  async login(email: string, password: string) {
-    return this.auth.login(email, password);
+  async login(params: LoginParams) {
+    return this.auth.login(params);
   }
 
   /**
    * Registers a new user with email, password, and optional additional data.
    *
    * @deprecated Use `db.auth.register()` instead. This method will be removed in a future version.
-   * @param email - User's email address
-   * @param password - User's password
-   * @param data - Optional additional user data
+   * @param params - Registration parameters
    * @returns Promise that resolves when registration is complete
    *
    * @example
    * ```typescript
-   * await db.register('user@example.com', 'password123', {
-   *   username: 'johndoe',
-   *   fullName: 'John Doe'
+   * await db.register({
+   *   email: 'user@example.com',
+   *   password: 'password123',
+   *   data: { username: 'johndoe', fullName: 'John Doe' }
    * });
    * ```
    */
-  async register(email: string, password: string, data?: Record<string, any>) {
-    return this.auth.register(email, password, data);
+  async register(params: RegisterParams) {
+    return this.auth.register(params);
   }
 
   /**
    * Authenticates a user using Google Sign-In with ID token.
    *
    * @deprecated Use `db.auth.loginWithGoogle()` instead. This method will be removed in a future version.
-   * @param idToken - Google ID token obtained from Google Sign-In
-   * @param platform - Optional platform identifier ('web', 'mobile', 'ios', 'android')
+   * @param params - Google login parameters
    * @returns Promise resolving to the authenticated user object
    *
    * @example
    * ```typescript
    * // New recommended way
-   * const user = await db.auth.loginWithGoogle(idToken, 'web');
+   * const user = await db.auth.loginWithGoogle({ idToken, platform: 'web' });
    *
    * // Old way (deprecated)
-   * const user = await db.loginWithGoogle(idToken, 'web');
+   * const user = await db.loginWithGoogle({ idToken, platform: 'web' });
    * ```
    */
-  async loginWithGoogle(
-    idToken: string,
-    platform?: "web" | "mobile" | "ios" | "android"
-  ): Promise<AppUser> {
-    return this.auth.loginWithGoogle(idToken, platform);
+  async loginWithGoogle(params: GoogleLoginParams): Promise<AppUser> {
+    return this.auth.loginWithGoogle(params);
   }
 
   /**
    * Register a new user with file uploads (avatar, cover photo, etc.)
    *
    * @deprecated Use `db.auth.registerWithFiles()` instead. This method will be removed in a future version.
-   * @param email - User email
-   * @param password - User password
-   * @param data - Additional user data (optional)
-   * @param files - Object mapping field names to File objects (optional)
+   * @param params - Registration parameters with files
    *
    * @example
    * ```typescript
    * // Register with avatar
-   * await db.registerWithFiles(
-   *   'john@example.com',
-   *   'password123',
-   *   { username: 'johndoe', full_name: 'John Doe' },
-   *   { avatar: avatarFile }
-   * );
+   * await db.registerWithFiles({
+   *   email: 'john@example.com',
+   *   password: 'password123',
+   *   data: { username: 'johndoe', full_name: 'John Doe' },
+   *   files: { avatar: avatarFile }
+   * });
    *
    * // Register with avatar and cover photo
-   * await db.registerWithFiles(
-   *   'john@example.com',
-   *   'password123',
-   *   { username: 'johndoe' },
-   *   { avatar: avatarFile, cover_photo: coverFile }
-   * );
+   * await db.registerWithFiles({
+   *   email: 'john@example.com',
+   *   password: 'password123',
+   *   data: { username: 'johndoe' },
+   *   files: { avatar: avatarFile, cover_photo: coverFile }
+   * });
    * ```
    */
-  async registerWithFiles(
-    email: string,
-    password: string,
-    data?: Record<string, any>,
-    files?: Record<string, File | File[]>
-  ): Promise<LoginResult> {
-    return this.auth.registerWithFiles(email, password, data, files);
+  async registerWithFiles(params: RegisterWithFilesParams): Promise<LoginResult> {
+    return this.auth.registerWithFiles(params);
   }
 
   /**
@@ -700,116 +663,6 @@ export class Cocobase {
     return this.auth.getCurrentUser();
   }
 
-  /**
-   * @deprecated Use `db.auth.updateUser()` instead. This method will be removed in a future version.
-   */
-  async updateUser(
-    data?: Record<string, any> | null,
-    email?: string | null,
-    password?: string | null
-  ): Promise<AppUser> {
-    return this.auth.updateUser(data, email, password);
-  }
-
-  /**
-   * Update current user with file uploads
-   *
-   * @deprecated Use `db.auth.updateUserWithFiles()` instead. This method will be removed in a future version.
-   * @param data - User data to update (optional)
-   * @param email - New email (optional)
-   * @param password - New password (optional)
-   * @param files - Object mapping field names to File objects (optional)
-   *
-   * @example
-   * ```typescript
-   * // Update only avatar
-   * await db.updateUserWithFiles(
-   *   undefined, undefined, undefined,
-   *   { avatar: newAvatarFile }
-   * );
-   *
-   * // Update bio and avatar
-   * await db.updateUserWithFiles(
-   *   { bio: 'Updated bio' },
-   *   undefined, undefined,
-   *   { avatar: newAvatarFile }
-   * );
-   *
-   * // Update multiple fields and files
-   * await db.updateUserWithFiles(
-   *   { username: 'newusername', bio: 'New bio' },
-   *   'newemail@example.com',
-   *   undefined,
-   *   { avatar: newAvatar, cover_photo: newCover }
-   * );
-   * ```
-   */
-  async updateUserWithFiles(
-    data?: Record<string, any> | null,
-    email?: string | null,
-    password?: string | null,
-    files?: Record<string, File | File[]>
-  ): Promise<AppUser> {
-    return this.auth.updateUserWithFiles(data, email, password, files);
-  }
-
-
-  /**
-   * Checks if the current user has a specific role.
-   *
-   * @deprecated Use `db.auth.hasRole()` instead. This method will be removed in a future version.
-   * @param role - Role to check for
-   * @returns True if user has the role, false otherwise
-   *
-   * @example
-   * ```typescript
-   * if (db.hasRole('admin')) {
-   *   console.log('User is an admin');
-   * }
-   * ```
-   */
-  hasRole(role: string): boolean {
-    return this.auth.hasRole(role);
-  }
-
-  // AUTH COLLECTION ROUTES
-  /**
-   * Lists users from the auth collection with optional filtering and pagination.
-   *
-   * @deprecated Use `db.auth.listUsers()` instead. This method will be removed in a future version.
-   * @template T - The type of user data
-   * @param query - Optional query parameters for filtering, sorting, and pagination
-   * @returns Promise resolving to a list of users
-   *
-   * @example
-   * ```typescript
-   * const users = await db.listUsers({
-   *   filters: { status: 'active' },
-   *   limit: 10
-   * });
-   * ```
-   */
-  listUsers<T = any>(query?: Query): Promise<AppUserList> {
-    return this.auth.listUsers(query);
-  }
-
-  /**
-   * Gets a user by their ID.
-   *
-   * @deprecated Use `db.auth.getUserById()` instead. This method will be removed in a future version.
-   * @template T - The type of user data
-   * @param userId - Unique ID of the user
-   * @returns Promise resolving to the user object
-   *
-   * @example
-   * ```typescript
-   * const user = await db.getUserById('user-123');
-   * console.log('User:', user.email);
-   * ```
-   */
-  getUserById<T = any>(userId: string): Promise<AppUser> {
-    return this.auth.getUserById(userId);
-  }
 
   // BATCH OPERATIONS
   async deleteDocuments(

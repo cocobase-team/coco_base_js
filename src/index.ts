@@ -27,6 +27,16 @@ export type {
   ParsedQuery,
   ParsedFilterKey,
 } from "./types/filter";
+export type {
+  LoginParams,
+  RegisterParams,
+  RegisterWithFilesParams,
+  UpdateUserParams,
+  UpdateUserWithFilesParams,
+  GoogleLoginParams,
+  GithubLoginParams,
+  Verify2FAParams,
+} from "./types/params";
 export { GameClient } from "./realtime/multiplayer";
 export type {
   Player,
