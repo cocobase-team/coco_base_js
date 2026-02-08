@@ -19,11 +19,13 @@ const db = new Cocobase({
 await db.createDocument("users", { name: "John" });
 ```
 
+
 ### 🛡️ **Authentication Made Simple**
 
 Built-in user management that actually works. Registration, login, sessions, and user profiles - all handled seamlessly.
 
 ```typescript
+
 // User registration + automatic login in one line
 await db.auth.register("user@example.com", "password", { role: "admin" });
 ```
@@ -224,17 +226,6 @@ await db.createDocument("events", {
   metadata: { button: "signup", page: "landing" },
 });
 ```
-
-## 🆚 How We Compare
-
-| Feature                  | Cocobase       | Firebase    | Supabase   | Custom Backend   |
-| ------------------------ | -------------- | ----------- | ---------- | ---------------- |
-| **Setup Time**           | 2 minutes      | 15 minutes  | 30 minutes | Weeks/Months     |
-| **TypeScript Support**   | ✅ Native      | ⚠️ Limited  | ✅ Good    | 🛠️ DIY           |
-| **Learning Curve**       | 📈 Minimal     | 📈 Moderate | 📈 Steep   | 📈 Very Steep    |
-| **Authentication**       | ✅ Built-in    | ✅ Complex  | ✅ Good    | 🛠️ Build it      |
-| **Developer Experience** | 🔥 Excellent   | ⚠️ Mixed    | ✅ Good    | 🛠️ Varies        |
-| **Pricing**              | 💰 Transparent | 💰 Complex  | 💰 Fair    | 💰 Unpredictable |
 
 ## 🎨 Framework Integration
 
