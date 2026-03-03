@@ -5,7 +5,15 @@ All notable changes to the Cocobase JavaScript SDK will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## 1.5.3
+
+### ✨ Added
+
+#### Forgot Password Support
+- 🔐 **Password Reset Functionality**: Added `requestPasswordReset(email)` method to initiate password reset process
+- 📧 **Email-Based Reset**: Users can request a password reset link sent to their email , the changing of password is also handled on cocobase server
+
+## 1.5.0
 
 ### ✨ Added
 
