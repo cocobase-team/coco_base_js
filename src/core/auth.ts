@@ -43,7 +43,7 @@ export class AuthHandler {
   private baseURL: string;
   private apiKey?: string;
   private token?: string;
-   user?: AppUser;
+  user?: AppUser;
   private callbacks: AuthCallbacks = {};
 
   /**
@@ -167,7 +167,7 @@ export class AuthHandler {
     method: "GET" | "POST" | "PATCH" | "DELETE",
     path: string,
     body?: unknown,
-    useDataKey: boolean = true
+    useDataKey: boolean = true,
   ): Promise<T> {
     const url = `${this.baseURL}${path}`;
     const data = useDataKey ? { data: body } : body;
@@ -200,7 +200,7 @@ export class AuthHandler {
         };
 
         throw new Error(
-          `Request failed:\n${JSON.stringify(errorMessage, null, 2)}`
+          `Request failed:\n${JSON.stringify(errorMessage, null, 2)}`,
         );
       }
 
@@ -210,7 +210,7 @@ export class AuthHandler {
         throw error;
       }
       throw new Error(
-        `Unexpected error during ${method} request to ${url}: ${error}`
+        `Unexpected error during ${method} request to ${url}: ${error}`,
       );
     }
   }
@@ -300,7 +300,7 @@ export class AuthHandler {
       "POST",
       `/auth-collections/login`,
       { email, password },
-      false // Do not use data key for auth endpoints
+      false, // Do not use data key for auth endpoints
     );
 
     // Check if 2FA is required
@@ -354,12 +354,12 @@ export class AuthHandler {
    * ```
    */
   async register(params: RegisterParams): Promise<LoginResult> {
-    const { email, password, data, roles,phone_number } = params;
+    const { email, password, data, roles, phone_number } = params;
     const response = await this.request<TokenResponse>(
       "POST",
       `/auth-collections/signup`,
-      { email, password, data, roles ,phone_number},
-      false // Do not use data key for auth endpoints
+      { email, password, data, roles, phone_number },
+      false, // Do not use data key for auth endpoints
     );
 
     // Check if 2FA is required
@@ -428,7 +428,7 @@ export class AuthHandler {
       "POST",
       "/auth-collections/google-verify",
       { id_token: idToken, platform },
-      false
+      false,
     );
 
     this.token = response.access_token;
@@ -487,7 +487,7 @@ export class AuthHandler {
       "POST",
       "/auth-collections/github-verify",
       { code, redirect_uri: redirectUri, platform },
-      false
+      false,
     );
 
     this.token = response.access_token;
@@ -524,7 +524,9 @@ export class AuthHandler {
    * });
    * ```
    */
-  async registerWithFiles(params: RegisterWithFilesParams): Promise<LoginResult> {
+  async registerWithFiles(
+    params: RegisterWithFilesParams,
+  ): Promise<LoginResult> {
     const { email, password, data, roles, files } = params;
     const formData = new FormData();
 
@@ -680,7 +682,7 @@ export class AuthHandler {
       "PATCH",
       "/auth-collections/user",
       body,
-      false
+      false,
     );
 
     this.user = user as AppUser;
@@ -718,7 +720,9 @@ export class AuthHandler {
    * });
    * ```
    */
-  async updateUserWithFiles(params: UpdateUserWithFilesParams): Promise<AppUser> {
+  async updateUserWithFiles(
+    params: UpdateUserWithFilesParams,
+  ): Promise<AppUser> {
     const { data, email, password, files } = params;
     if (!this.token) {
       throw new Error("User is not authenticated");
@@ -816,6 +820,15 @@ export class AuthHandler {
     return this.request<AppUserList>("GET", url);
   }
 
+  requestPasswordReset(email: string): Promise<any> {
+    return this.request(
+      "POST",
+      "/auth-collections/forgot-password",
+      { email },
+      false,
+    );
+  }
+
   /**
    * Gets a user by their ID.
    *
@@ -851,7 +864,7 @@ export class AuthHandler {
       "POST",
       `/auth-collections/2fa/enable`,
       {},
-      false
+      false,
     );
   }
 
@@ -871,7 +884,7 @@ export class AuthHandler {
       "POST",
       `/auth-collections/2fa/disable`,
       {},
-      false
+      false,
     );
   }
 
@@ -886,14 +899,14 @@ export class AuthHandler {
    * console.log('2FA code sent to user');
    * ```
    */
-  send2FACode(email:string): Promise<void> {
+  send2FACode(email: string): Promise<void> {
     return this.request<void>(
       "POST",
       `/auth-collections/2fa/send-code`,
       {
-        email
+        email,
       },
-      false
+      false,
     );
   }
 
@@ -922,7 +935,7 @@ export class AuthHandler {
       "POST",
       `/auth-collections/2fa/verify`,
       { email, code },
-      false
+      false,
     );
 
     this.token = response.access_token;
@@ -951,7 +964,7 @@ export class AuthHandler {
       "POST",
       `/auth-collections/verify-email/send`,
       {},
-      false
+      false,
     );
   }
 
@@ -972,7 +985,7 @@ export class AuthHandler {
       "POST",
       `/auth-collections/verify-email/verify`,
       { token },
-      false
+      false,
     );
   }
 
@@ -991,7 +1004,7 @@ export class AuthHandler {
       "POST",
       `/auth-collections/verify-email/resend`,
       {},
-      false
+      false,
     );
   }
 }
